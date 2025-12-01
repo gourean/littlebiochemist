@@ -2,56 +2,57 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Little Biochemist: Lipid Sandbox</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Little Biochemist</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
 
         body {
             font-family: 'Fredoka', sans-serif;
-            background-color: #fff7ed; /* Warm creamy background */
+            background-color: #fff7ed;
             overflow: hidden;
-            touch-action: none; /* Prevents scrolling on the workbench canvas */
+            touch-action: none; 
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* Custom Scrollbar - Increased Size */
-        .inventory-scroll::-webkit-scrollbar { width: 12px; }
-        .inventory-scroll::-webkit-scrollbar-track { background: #fff1f2; }
-        .inventory-scroll::-webkit-scrollbar-thumb { 
-            background: #fb7185; 
-            border-radius: 6px;
-            border: 2px solid #fff1f2; /* visual separation */
+        /* Standard Scrollbar for Inventory */
+        .inventory-scroll { 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y; 
         }
-        
-        /* Enable touch scrolling for inventory list specifically */
-        #inventory-list {
-            touch-action: pan-y; /* Allow vertical scrolling */
-            -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+        .inventory-scroll::-webkit-scrollbar { width: 6px; }
+        .inventory-scroll::-webkit-scrollbar-thumb { 
+            background-color: #cbd5e1; 
+            border-radius: 4px; 
         }
 
         /* Game Elements */
         .molecule {
-            cursor: grab;
             transition: transform 0.1s;
-            position: absolute;
-            z-index: 10;
             filter: drop-shadow(2px 2px 0px rgba(0,0,0,0.1));
+            touch-action: none;
+            will-change: transform, left, top; /* Performance hint */
         }
-        .molecule:active {
-            cursor: grabbing;
-            transform: scale(1.1);
-            z-index: 50;
+        
+        /* Dragging State */
+        .molecule.dragging {
+            position: fixed !important;
+            z-index: 9999 !important;
+            pointer-events: none; 
+            opacity: 0.9;
+            transform: scale(1.1) !important;
+            filter: drop-shadow(0px 15px 30px rgba(0,0,0,0.3));
         }
 
         .inventory-item {
             transition: all 0.2s;
-            cursor: grab;
         }
-        .inventory-item:hover {
+        .inventory-item:active {
+            transform: scale(0.95);
             background-color: #ffedd5;
-            transform: translateY(-2px);
         }
 
         /* Enzyme/Pathway Box Styling */
@@ -59,17 +60,15 @@
             border: 3px dashed #78716c;
             background-color: rgba(255, 255, 255, 0.6);
             border-radius: 16px;
-            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
-            pointer-events: all;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
         }
         
         .enzyme-box.pathway {
-            border-color: #be185d; /* Pinkish for pathways */
+            border-color: #be185d;
             background-color: rgba(255, 241, 242, 0.7);
         }
 
@@ -82,6 +81,18 @@
         .enzyme-box.reject {
             animation: shake 0.4s ease-in-out;
             border-color: #ef4444;
+        }
+
+        /* Trash Bin Styling */
+        .trash-bin {
+            transition: all 0.2s;
+            border: 2px dashed #fca5a5;
+        }
+        .trash-bin.hovered {
+            transform: scale(1.1);
+            background-color: #fee2e2;
+            border-color: #ef4444;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
         }
 
         @keyframes pulse-orange {
@@ -101,493 +112,266 @@
         .atom-c { fill: #3b82f6; } 
         .atom-o { fill: #ef4444; } 
         .atom-h { fill: #ffffff; } 
-        .atom-p { fill: #eab308; } /* Phosphate */
-        .atom-n { fill: #8b5cf6; } 
         .bond { stroke: #1e293b; stroke-width: 3px; stroke-linecap: round; }
-        
         .lipid-stroke { stroke: #854d0e; stroke-width: 4px; stroke-linecap: round; }
 
-        /* Tabs - Standard CSS */
+        /* Tabs */
         .tab-btn {
-            padding: 8px 2px; 
-            font-size: 10px; 
+            padding: 8px 4px;
+            font-size: 11px;
             font-weight: 700;
-            color: #334155; 
-            border-bottom: 2px solid transparent;
+            color: #64748b;
+            border-radius: 8px;
             transition: all 0.2s;
             flex: 1;
             text-align: center;
-            margin: 0 1px;
-            border-top-left-radius: 6px;
-            border-top-right-radius: 6px;
-            background-color: rgba(255, 247, 237, 0.5); 
+            background-color: transparent;
             cursor: pointer;
-            white-space: nowrap; 
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
         
-        @media (min-width: 768px) {
-            .tab-btn {
-                padding: 8px 4px;
-                font-size: 11px;
-                margin: 0 2px;
-            }
-        }
-        
-        .tab-btn:hover {
-            color: #f97316; 
-            background-color: rgba(255, 247, 237, 0.8);
-        }
-
         .tab-btn.active {
             color: #ea580c; 
-            border-bottom-color: #f97316; 
-            background-color: #ffffff;
-            border-bottom-width: 0;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            background-color: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col">
+<body class="h-screen w-screen flex flex-col overflow-hidden">
 
     <!-- Top Bar -->
-    <header class="bg-white border-b-4 border-orange-200 p-3 flex justify-between items-center z-20 shadow-sm h-16 shrink-0">
-        <div class="flex items-center gap-2 md:gap-3">
-            <h1 class="text-lg md:text-2xl font-bold text-orange-800 tracking-wide truncate">LITTLE BIOCHEMIST</h1>
-            <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded border border-green-200 hidden md:inline">SANDBOX</span>
+    <header class="bg-white/90 backdrop-blur border-b border-orange-200 p-3 flex justify-between items-center z-30 shrink-0 shadow-sm h-14 md:h-16">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold shadow-sm">LB</div>
+            <div class="flex flex-col leading-tight">
+                <h1 class="text-sm md:text-lg font-bold text-slate-800 tracking-wide">LITTLE BIOCHEMIST</h1>
+                <span class="text-[10px] text-green-700 bg-green-100 border border-green-200 px-2 py-0.5 rounded-full font-bold tracking-wider w-fit">SANDBOX</span>
+            </div>
         </div>
-        <div class="flex gap-2 md:gap-4 font-semibold text-slate-600">
-            <button onclick="resetGame()" class="text-xs md:text-sm bg-slate-100 hover:bg-slate-200 px-2 md:px-3 py-1 rounded text-slate-500 transition whitespace-nowrap">Reset</button>
+        <div class="flex gap-2">
+            <button onclick="resetGame()" class="text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-full transition shadow-sm border border-slate-200">
+                ↺ Reset
+            </button>
         </div>
     </header>
 
-    <!-- Main Game Area -->
-    <div class="flex-1 flex overflow-hidden relative">
+    <!-- Main Layout -->
+    <div class="flex-1 flex flex-col md:flex-row relative overflow-hidden">
         
-        <!-- Inventory Sidebar (Responsive width: 30% on mobile, fixed on larger) -->
-        <aside class="w-[30%] md:w-64 bg-white border-r border-orange-100 flex flex-col z-20 shadow-lg transition-all shrink-0">
+        <!-- Workbench -->
+        <main id="workbench" class="flex-1 relative bg-orange-50/50 bg-[radial-gradient(#fed7aa_1px,transparent_1px)] [background-size:20px_20px] order-1 md:order-2 overflow-hidden flex flex-col">
+            <div class="absolute top-4 left-4 text-orange-300 font-bold text-lg opacity-50 pointer-events-none select-none hidden md:block">
+                WORKBENCH
+            </div>
             
-            <!-- Search Bar -->
-            <div class="p-2 border-b border-orange-50 bg-white">
-                <input type="text" id="search-bar" placeholder="Search" class="w-full px-2 py-1 text-xs md:text-sm border border-orange-200 rounded-full focus:outline-none focus:border-orange-400 bg-orange-50/50 text-slate-600 placeholder-orange-300">
+            <div id="tutorial-msg" class="absolute inset-0 flex items-center justify-center pointer-events-none p-6 z-0">
+                <div class="bg-white/80 backdrop-blur-sm px-6 py-6 rounded-2xl text-slate-600 text-center shadow-lg border-2 border-orange-100 max-w-sm">
+                    <p class="font-bold text-lg mb-2 text-orange-800">Start Experimenting!</p>
+                    <p class="text-sm leading-relaxed">Click items in the inventory to add them.</p>
+                </div>
             </div>
 
+            <!-- Trash Bin -->
+            <div id="trash-bin" class="trash-bin absolute bottom-12 right-4 w-16 h-16 md:w-20 md:h-20 bg-white/80 backdrop-blur rounded-2xl flex items-center justify-center shadow-lg z-10 transition-colors">
+                <div class="pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-auto w-full text-center text-[10px] text-slate-400 p-2 pointer-events-none select-none bg-orange-50/30">
+                © 2025 Wong Gou Rean. All rights reserved.
+            </div>
+        </main>
+
+        <!-- Inventory Sidebar -->
+        <aside class="
+            order-2 md:order-1 
+            w-full h-[38vh] md:w-[280px] md:h-full 
+            bg-slate-50 border-t md:border-t-0 md:border-r border-orange-200 
+            flex flex-col z-20 shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.1)] md:shadow-lg
+            shrink-0 transition-all duration-300 ease-in-out
+        ">
             <!-- Tabs -->
-            <div class="flex border-b border-orange-200 bg-orange-100/50 pt-2 px-1 gap-1">
+            <div class="flex p-2 gap-1 bg-slate-100 border-b border-slate-200 shrink-0">
                 <button onclick="switchTab('molecules')" id="tab-molecules" class="tab-btn active">Molecules</button>
                 <button onclick="switchTab('enzymes')" id="tab-enzymes" class="tab-btn">Enzymes</button>
                 <button onclick="switchTab('pathways')" id="tab-pathways" class="tab-btn">Pathways</button>
             </div>
 
-            <!-- List -->
-            <div id="inventory-list" class="flex-1 overflow-y-auto inventory-scroll p-1 md:p-2 grid grid-cols-1 gap-2 content-start">
+            <!-- Search -->
+            <div class="px-3 py-2 bg-white border-b border-slate-100 shrink-0">
+                <input type="text" id="search-bar" placeholder="Search..." class="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-orange-400 focus:bg-white transition-colors text-slate-600">
+            </div>
+
+            <!-- List Container -->
+            <div id="inventory-list" class="flex-1 inventory-scroll p-2 grid grid-cols-1 gap-2 content-start pb-8">
                 <!-- Items injected here -->
             </div>
         </aside>
 
-        <!-- Workbench -->
-        <main id="workbench" class="flex-1 relative bg-orange-50/50 bg-[radial-gradient(#fed7aa_1px,transparent_1px)] [background-size:20px_20px]">
-            <div class="absolute top-4 left-4 text-orange-300 font-bold text-lg opacity-50 pointer-events-none select-none hidden md:block">
-                LIPID WORKBENCH
-            </div>
-            
-            <div id="tutorial-msg" class="absolute inset-0 flex items-center justify-center pointer-events-none p-4">
-                <div class="bg-white/90 backdrop-blur px-6 py-4 md:px-8 md:py-6 rounded-2xl text-slate-600 text-center shadow-md border-2 border-orange-100 max-w-md">
-                    <p class="font-bold text-lg md:text-xl mb-2 text-orange-800">Lipid Metabolism Sandbox</p>
-                    <p class="text-xs md:text-sm mb-2">Drag items from the tabs.</p>
-                    <p class="text-xs md:text-sm mb-2">Combine them to see metabolic reactions!</p>
-                </div>
-            </div>
-        </main>
-
     </div>
-    
-    <!-- Footer with Safe Area Padding -->
-    <footer class="bg-white border-t border-orange-100 p-2 pb-8 md:pb-2 text-center text-[8px] md:text-[10px] text-slate-400 z-20">
-        © 2025 Wong Gou Rean. All rights reserved.
-    </footer>
 
     <!-- Disclaimer Modal -->
-    <div id="disclaimer-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div id="disclaimer-modal" class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full text-center border-4 border-orange-200">
-            <h2 class="text-xl md:text-2xl font-bold text-orange-800 mb-4">Disclaimer</h2>
-            <p class="text-slate-600 text-xs md:text-sm mb-6 leading-relaxed text-justify max-h-[60vh] overflow-y-auto">
-                The metabolic pathways and biochemical processes depicted in this game are simplified for educational purposes. While they are designed to illustrate key concepts within the scope of study, they may not fully reflect the complete complexity, accuracy or current scientific understanding of real biochemical mechanisms. You should refer to authoritative textbooks and academic resources for precise and comprehensive information.
+            <h2 class="text-xl font-bold text-orange-800 mb-4">Disclaimer</h2>
+            <p class="text-slate-600 text-sm mb-6 leading-relaxed text-justify max-h-[50vh] overflow-y-auto">
+                The metabolic pathways and biochemical processes in this platform are simplified for educational purposes and may not fully reflect real biochemical mechanisms. For accurate and detailed information, please refer to authoritative textbooks and academic resources.
             </p>
-            <button onclick="closeDisclaimer()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-full transition shadow-lg shadow-orange-500/30 text-sm">
+            <button onclick="closeDisclaimer()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-xl transition shadow-lg shadow-orange-500/30 text-sm w-full">
                 Understand
             </button>
         </div>
     </div>
 
+    <!-- Drag Layer -->
+    <div id="drag-layer" class="fixed inset-0 pointer-events-none z-[9999]"></div>
+
     <script>
         // --- DATA ---
-
         const ELEMENTS = {
             // --- MOLECULES ---
-            'triglyceride': { 
-                name: 'Triglyceride', category: 'molecules', chainLength: 99,
-                desc: 'Storage fat. Glycerol + 3 Fatty Acids.',
-                render: (id, label) => createTAG(id, label)
-            },
-            // Intermediates
-            'monoacylglycerol': {
-                name: 'Monoacylglycerol', category: 'molecules',
-                desc: 'Glycerol + 1 Fatty Acid.',
-                render: (id, label) => createMAG(id, label)
-            },
-            'diacylglycerol': {
-                name: 'Diacylglycerol', category: 'molecules',
-                desc: 'Glycerol + 2 Fatty Acids.',
-                render: (id, label) => createDAG(id, label)
-            },
-            'cholesteryl_ester': {
-                name: 'Cholesteryl Ester', category: 'molecules',
-                desc: 'Storage form of Cholesterol.',
-                render: (id, label) => createCholesterylEster(id, label)
-            },
-            // NEW MOLECULES
-            'glucose': { name: 'Glucose', category: 'molecules', desc: 'Blood sugar. Primary energy source.', render: (id, label) => createGlucose(id, label) },
-            'pyruvate': { name: 'Pyruvate', category: 'molecules', desc: 'End product of glycolysis.', render: (id, label) => createPyruvate(id, label) },
-            'succinyl_coa': { name: 'Succinyl-CoA', category: 'molecules', desc: 'TCA intermediate.', render: (id, label) => createSuccinylCoA(id, label) },
-            'succinate': { name: 'Succinate', category: 'molecules', desc: 'TCA intermediate.', render: (id, label) => createSuccinate(id, label) },
-            'citrate': { name: 'Citrate', category: 'molecules', desc: 'First intermediate of TCA.', render: (id, label) => createCitrate(id, label) },
-            'oaa': { name: 'Oxaloacetate (OAA)', category: 'molecules', desc: 'TCA cycle acceptor.', render: (id, label) => createOAA(id, label) },
-            'malate': { name: 'Malate', category: 'molecules', desc: 'TCA intermediate.', render: (id, label) => createMalate(id, label) },
-            'amp': { name: 'AMP', category: 'molecules', desc: 'Adenosine Monophosphate.', render: (id, label) => createMoleculeSmall(id, 'AMP', '#94a3b8') },
-            'nad': { name: 'NAD+', category: 'molecules', desc: 'Electron acceptor.', render: (id, label) => createMoleculeSmall(id, 'NAD+', '#8b5cf6') },
-
-
-            // Generic FA
-            'fatty_acid': { 
-                name: 'Fatty Acid', category: 'molecules', chainLength: 0,
-                desc: 'Generic long chain fatty acid.', 
-                render: (id, label) => createFattyAcid(id, 4, label) 
-            },
-            // Even Saturated Fatty Acids
-            'stearic_acid': { name: 'Stearic Acid (18:0)', category: 'molecules', chainLength: 18, desc: 'Saturated Fatty Acid.', render: (id, label) => createFattyAcid(id, 9, label) },
-            'palmitic_acid': { name: 'Palmitic Acid (16:0)', category: 'molecules', chainLength: 16, desc: 'Saturated Fatty Acid.', render: (id, label) => createFattyAcid(id, 8, label) },
-            'myristic_acid': { name: 'Myristic Acid (14:0)', category: 'molecules', chainLength: 14, desc: 'Saturated Fatty Acid.', render: (id, label) => createFattyAcid(id, 7, label) },
-            'lauric_acid': { name: 'Lauric Acid (12:0)', category: 'molecules', chainLength: 12, desc: 'Saturated Fatty Acid.', render: (id, label) => createFattyAcid(id, 6, label) },
-            'capric_acid': { name: 'Capric Acid (10:0)', category: 'molecules', chainLength: 10, desc: 'Saturated Fatty Acid.', render: (id, label) => createFattyAcid(id, 5, label) },
-            'caprylic_acid': { name: 'Caprylic Acid (8:0)', category: 'molecules', chainLength: 8, desc: 'Saturated Fatty Acid.', render: (id, label) => createFattyAcid(id, 4, label) },
-            'caproic_acid': { name: 'Caproic Acid (6:0)', category: 'molecules', chainLength: 6, desc: 'Saturated Fatty Acid.', render: (id, label) => createFattyAcid(id, 3, label) },
-            'butyric_acid': { name: 'Butyric Acid (4:0)', category: 'molecules', chainLength: 4, desc: 'Saturated fatty acid.', render: (id, label) => createFattyAcid(id, 2, label) },
+            'triglyceride': { name: 'Triglyceride', category: 'molecules', chainLength: 99, desc: 'Lipid storage', render: (id, label) => createTAG(id, label) },
+            'monoacylglycerol': { name: 'Monoacylglycerol', category: 'molecules', desc: 'Glycerol + 1 FA.', render: (id, label) => createMAG(id, label) },
+            'diacylglycerol': { name: 'Diacylglycerol', category: 'molecules', desc: 'Glycerol + 2 FA.', render: (id, label) => createDAG(id, label) },
+            'cholesteryl_ester': { name: 'Cholesteryl Ester', category: 'molecules', desc: 'Stored Cholesterol.', render: (id, label) => createCholesterylEster(id, label) },
             
-            // Odd Saturated Fatty Acids
-            'pentadecanoic_acid': { name: 'Pentadecanoic Acid (15:0)', category: 'molecules', chainLength: 15, desc: 'Odd Chain Fatty Acid.', render: (id, label) => createFattyAcid(id, 7, label) },
-            'tridecanoic_acid': { name: 'Tridecanoic Acid (13:0)', category: 'molecules', chainLength: 13, desc: 'Odd Chain Fatty Acid.', render: (id, label) => createFattyAcid(id, 6, label) },
-            'undecanoic_acid': { name: 'Undecanoic Acid (11:0)', category: 'molecules', chainLength: 11, desc: 'Odd Chain Fatty Acid.', render: (id, label) => createFattyAcid(id, 5, label) },
-            'nonanoic_acid': { name: 'Nonanoic Acid (9:0)', category: 'molecules', chainLength: 9, desc: 'Odd Chain Fatty Acid.', render: (id, label) => createFattyAcid(id, 4, label) },
-            'heptanoic_acid': { name: 'Heptanoic Acid (7:0)', category: 'molecules', chainLength: 7, desc: 'Odd Chain Fatty Acid.', render: (id, label) => createFattyAcid(id, 3, label) },
-            'valeric_acid': { name: 'Valeric Acid (5:0)', category: 'molecules', chainLength: 5, desc: 'Odd Chain Fatty Acid.', render: (id, label) => createFattyAcid(id, 2, label) },
-            'propionic_acid': { name: 'Propionic Acid (3:0)', category: 'molecules', chainLength: 3, desc: 'Odd Chain Fatty Acid.', render: (id, label) => createFattyAcid(id, 1, label) },
+            'glucose': { name: 'Glucose', category: 'molecules', desc: 'Major source of energy', render: (id, label) => createGlucose(id, label) },
+            'pyruvate': { name: 'Pyruvate', category: 'molecules', desc: 'End product of glycolysis', render: (id, label) => createPyruvate(id, label) },
+            'succinyl_coa': { name: 'Succinyl-CoA', category: 'molecules', desc: 'Intermediate of TCA cycle', render: (id, label) => createSuccinylCoA(id, label) },
+            'succinate': { name: 'Succinate', category: 'molecules', desc: 'Intermediate of TCA cycle', render: (id, label) => createSuccinate(id, label) },
+            'citrate': { name: 'Citrate', category: 'molecules', desc: 'Intermediate of TCA cycle', render: (id, label) => createCitrate(id, label) },
+            'oaa': { name: 'Oxaloacetate', category: 'molecules', desc: 'TCA acceptor.', render: (id, label) => createOAA(id, label) },
+            'malate': { name: 'Malate', category: 'molecules', desc: 'Intermediate of TCA cycle', render: (id, label) => createMalate(id, label) },
+            'amp': { name: 'AMP', category: 'molecules', desc: 'Adenosine monophosphate', render: (id, label) => createMoleculeSmall(id, 'AMP', '#94a3b8') },
+            'nad': { name: 'NAD+', category: 'molecules', desc: 'Oxidizing agent', render: (id, label) => createMoleculeSmall(id, 'NAD+', '#8b5cf6') },
+            'water': { name: 'Water', category: 'molecules', desc: 'H2O.', render: (id, label) => createMoleculeSmall(id, 'H2O', '#3b82f6') },
+            'acetone': { name: 'Acetone', category: 'molecules', desc: 'Volatile ketone body', render: (id, label) => createAcetone(id, label) },
 
-            'glycerol': {
-                name: 'Glycerol', category: 'molecules',
-                desc: 'Backbone of lipids.',
-                render: (id, label) => createGlycerol(id, label)
-            },
+            'fatty_acid': { name: 'Fatty Acid', category: 'molecules', chainLength: 0, desc: 'Generic long chain fatty acid', render: (id, label) => createFattyAcid(id, 4, label) },
             
-            // Activated Fatty Acids (Acyl-CoAs)
-            'acyl_coa': { name: 'Acyl-CoA', category: 'molecules', chainLength: 0, desc: 'Activated Fatty Acid.', render: (id, label) => createAcylCoA(id, label || 'Acyl-CoA') },
+            // Saturated Fatty Acids (Even)
+            'stearic_acid': { name: 'Stearic Acid (18:0)', category: 'molecules', chainLength: 18, desc: 'Saturated fatty acid', render: (id, label) => createFattyAcid(id, 9, label) },
+            'palmitic_acid': { name: 'Palmitic Acid (16:0)', category: 'molecules', chainLength: 16, desc: 'Saturated fatty acid', render: (id, label) => createFattyAcid(id, 8, label) },
+            'myristic_acid': { name: 'Myristic Acid (14:0)', category: 'molecules', chainLength: 14, desc: 'Saturated fatty acid', render: (id, label) => createFattyAcid(id, 7, label) },
+            'lauric_acid': { name: 'Lauric Acid (12:0)', category: 'molecules', chainLength: 12, desc: 'Saturated fatty acid', render: (id, label) => createFattyAcid(id, 6, label) },
+            'capric_acid': { name: 'Capric Acid (10:0)', category: 'molecules', chainLength: 10, desc: 'Saturated fatty acid', render: (id, label) => createFattyAcid(id, 5, label) },
+            'caprylic_acid': { name: 'Caprylic Acid (8:0)', category: 'molecules', chainLength: 8, desc: 'Saturated fatty acid', render: (id, label) => createFattyAcid(id, 4, label) },
+            'caproic_acid': { name: 'Caproic Acid (6:0)', category: 'molecules', chainLength: 6, desc: 'Saturated fatty acid', render: (id, label) => createFattyAcid(id, 3, label) },
+            'butyric_acid': { name: 'Butyric Acid (4:0)', category: 'molecules', chainLength: 4, desc: 'Saturated fatty acid', render: (id, label) => createFattyAcid(id, 2, label) },
             
-            // Specific Even CoAs
-            'acyl_coa_18': { name: 'Stearoyl-CoA (C18)', category: 'molecules', chainLength: 18, desc: 'Activated Stearic Acid.', render: (id, label) => createAcylCoA(id, label || 'Stearoyl-CoA (C18)') },
-            'acyl_coa_16': { name: 'Palmitoyl-CoA (C16)', category: 'molecules', chainLength: 16, desc: 'Activated Palmitic Acid.', render: (id, label) => createAcylCoA(id, label || 'Palmitoyl-CoA (C16)') },
-            'acyl_coa_14': { name: 'Myristoyl-CoA (C14)', category: 'molecules', chainLength: 14, desc: 'Activated Myristic Acid.', render: (id, label) => createAcylCoA(id, label || 'Myristoyl-CoA (C14)') },
-            'acyl_coa_12': { name: 'Lauroyl-CoA (C12)', category: 'molecules', chainLength: 12, desc: 'Activated Lauric Acid.', render: (id, label) => createAcylCoA(id, label || 'Lauroyl-CoA (C12)') },
-            'acyl_coa_10': { name: 'Decanoyl-CoA (C10)', category: 'molecules', chainLength: 10, desc: 'Activated Capric Acid.', render: (id, label) => createAcylCoA(id, label || 'Decanoyl-CoA (C10)') },
-            'acyl_coa_8': { name: 'Octanoyl-CoA (C8)', category: 'molecules', chainLength: 8, desc: 'Activated Caprylic Acid.', render: (id, label) => createAcylCoA(id, label || 'Octanoyl-CoA (C8)') },
-            'acyl_coa_6': { name: 'Hexanoyl-CoA (C6)', category: 'molecules', chainLength: 6, desc: 'Activated Caproic Acid.', render: (id, label) => createAcylCoA(id, label || 'Hexanoyl-CoA (C6)') },
-            'acyl_coa_4': { name: 'Butyryl-CoA (C4)', category: 'molecules', chainLength: 4, desc: 'Activated Butyric Acid.', render: (id, label) => createAcylCoA(id, label || 'Butyryl-CoA (C4)') },
+            // Odd Chain Fatty Acids
+            'pentadecanoic_acid': { name: 'Pentadecanoic (15:0)', category: 'molecules', chainLength: 15, desc: 'Odd-chain fatty acid', render: (id, label) => createFattyAcid(id, 7, label) },
+            'tridecanoic_acid': { name: 'Tridecanoic (13:0)', category: 'molecules', chainLength: 13, desc: 'Odd-chain fatty acid', render: (id, label) => createFattyAcid(id, 6, label) },
+            'undecanoic_acid': { name: 'Undecanoic (11:0)', category: 'molecules', chainLength: 11, desc: 'Odd-chain fatty acid', render: (id, label) => createFattyAcid(id, 5, label) },
+            'nonanoic_acid': { name: 'Nonanoic (9:0)', category: 'molecules', chainLength: 9, desc: 'Odd-chain fatty acid', render: (id, label) => createFattyAcid(id, 4, label) },
+            'heptanoic_acid': { name: 'Heptanoic (7:0)', category: 'molecules', chainLength: 7, desc: 'Odd-chain fatty acid', render: (id, label) => createFattyAcid(id, 3, label) },
+            'valeric_acid': { name: 'Valeric (5:0)', category: 'molecules', chainLength: 5, desc: 'Odd-chain fatty acid', render: (id, label) => createFattyAcid(id, 2, label) },
+            'propionic_acid': { name: 'Propionic (3:0)', category: 'molecules', chainLength: 3, desc: 'Odd-chain fatty acid', render: (id, label) => createFattyAcid(id, 1, label) },
 
-            // Specific Odd CoAs
-            'acyl_coa_15': { name: 'Pentadecanoyl-CoA (C15)', category: 'molecules', chainLength: 15, desc: 'Activated Odd Acid.', render: (id, label) => createAcylCoA(id, label || 'Pentadecanoyl-CoA') },
-            'acyl_coa_13': { name: 'Tridecanoyl-CoA (C13)', category: 'molecules', chainLength: 13, desc: 'Activated Odd Acid.', render: (id, label) => createAcylCoA(id, label || 'Tridecanoyl-CoA') },
-            'acyl_coa_11': { name: 'Undecanoyl-CoA (C11)', category: 'molecules', chainLength: 11, desc: 'Activated Odd Acid.', render: (id, label) => createAcylCoA(id, label || 'Undecanoyl-CoA') },
-            'acyl_coa_9': { name: 'Nonanoyl-CoA (C9)', category: 'molecules', chainLength: 9, desc: 'Activated Odd Acid.', render: (id, label) => createAcylCoA(id, label || 'Nonanoyl-CoA') },
-            'acyl_coa_7': { name: 'Heptanoyl-CoA (C7)', category: 'molecules', chainLength: 7, desc: 'Activated Odd Acid.', render: (id, label) => createAcylCoA(id, label || 'Heptanoyl-CoA') },
-            'acyl_coa_5': { name: 'Valeroyl-CoA (C5)', category: 'molecules', chainLength: 5, desc: 'Activated Odd Acid.', render: (id, label) => createAcylCoA(id, label || 'Valeroyl-CoA') },
-            'acyl_coa_3': { name: 'Propanoyl-CoA (C3)', category: 'molecules', chainLength: 3, desc: 'Activated Odd Acid.', render: (id, label) => createAcylCoA(id, label || 'Propanoyl-CoA') },
+            'glycerol': { name: 'Glycerol', category: 'molecules', desc: 'Lipid backbone.', render: (id, label) => createGlycerol(id, label) },
+            
+            // Acyl-CoAs (Activated Fatty Acids)
+            'acyl_coa': { name: 'Acyl-CoA', category: 'molecules', chainLength: 0, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Acyl-CoA') },
+            
+            // Even Chain Activated
+            'acyl_coa_18': { name: 'Stearoyl-CoA (C18)', category: 'molecules', chainLength: 18, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Stearoyl-CoA (C18)') },
+            'acyl_coa_16': { name: 'Palmitoyl-CoA (C16)', category: 'molecules', chainLength: 16, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Palmitoyl-CoA (C16)') },
+            'acyl_coa_14': { name: 'Myristoyl-CoA (C14)', category: 'molecules', chainLength: 14, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Myristoyl-CoA (C14)') },
+            'acyl_coa_12': { name: 'Lauroyl-CoA (C12)', category: 'molecules', chainLength: 12, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Lauroyl-CoA (C12)') },
+            'acyl_coa_10': { name: 'Decanoyl-CoA (C10)', category: 'molecules', chainLength: 10, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Decanoyl-CoA (C10)') },
+            'acyl_coa_8': { name: 'Octanoyl-CoA (C8)', category: 'molecules', chainLength: 8, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Octanoyl-CoA (C8)') },
+            'acyl_coa_6': { name: 'Hexanoyl-CoA (C6)', category: 'molecules', chainLength: 6, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Hexanoyl-CoA (C6)') },
+            'acyl_coa_4': { name: 'Butyryl-CoA (C4)', category: 'molecules', chainLength: 4, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Butyryl-CoA (C4)') },
 
-            'acetyl_coa': {
-                name: 'Acetyl-CoA', category: 'molecules',
-                desc: 'Central metabolic hub (2C).',
-                render: (id, label) => createAcetylCoA(id, label)
-            },
-            'acetoacetyl_coa': {
-                name: 'Acetoacetyl-CoA', category: 'molecules',
-                desc: '4-Carbon intermediate.',
-                render: (id, label) => createAcetoAcetylCoA(id, label)
-            },
-            'hmg_coa': {
-                name: 'HMG-CoA', category: 'molecules',
-                desc: 'Precursor to Ketones & Cholesterol.',
-                render: (id, label) => createHMGCoA(id, label)
-            },
-            'ketone_body': {
-                name: 'Acetoacetate', category: 'molecules',
-                desc: 'Primary Ketone Body.',
-                render: (id, label) => createKetone(id, label)
-            },
-            '3_hydroxybutyrate': {
-                name: '3-Hydroxybutyrate', category: 'molecules',
-                desc: 'Reduced Ketone Body.',
-                render: (id, label) => create3HB(id, label)
-            },
-            'acetone': {
-                name: 'Acetone', category: 'molecules',
-                desc: 'Volatile Ketone Body.',
-                render: (id, label) => createAcetone(id, label)
-            },
-            'mevalonate': {
-                name: 'Mevalonate', category: 'molecules',
-                desc: 'Cholesterol precursor.',
-                render: (id, label) => createMevalonate(id, label)
-            },
-            'cholesterol': {
-                name: 'Cholesterol', category: 'molecules',
-                desc: 'Steroid structure.',
-                render: (id, label) => createCholesterol(id, label)
-            },
-            'malonyl_coa': {
-                name: 'Malonyl-CoA', category: 'molecules',
-                desc: '3C building block for synthesis.',
-                render: (id, label) => createMalonylCoA(id, label)
-            },
-            'water': {
-                name: 'Water', category: 'molecules',
-                desc: 'H2O. Needed for hydrolysis.',
-                render: (id, label) => createMoleculeSmall(id, 'H2O', '#3b82f6')
-            },
-            'atp': {
-                name: 'ATP', category: 'molecules',
-                desc: 'Energy currency.',
-                render: (id, label) => createMoleculeSmall(id, 'ATP', '#eab308')
-            },
-            'co2': {
-                name: 'CO2', category: 'molecules',
-                desc: 'Carbon Dioxide waste.',
-                render: (id, label) => createMoleculeSmall(id, 'CO2', '#64748b')
-            },
-            'nadph': {
-                name: 'NADPH', category: 'molecules',
-                desc: 'Reducing power for synthesis.',
-                render: (id, label) => createMoleculeSmall(id, 'NADPH', '#f472b6')
-            },
-            'nadh': {
-                name: 'NADH', category: 'molecules',
-                desc: 'Electron carrier.',
-                render: (id, label) => createMoleculeSmall(id, 'NADH', '#8b5cf6')
-            },
-            'fadh2': {
-                name: 'FADH2', category: 'molecules',
-                desc: 'Electron carrier.',
-                render: (id, label) => createMoleculeSmall(id, 'FADH2', '#8b5cf6')
-            },
+            // Odd Chain Activated
+            'acyl_coa_15': { name: 'Pentadecanoyl-CoA (C15)', category: 'molecules', chainLength: 15, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Pentadecanoyl-CoA (C15)') },
+            'acyl_coa_13': { name: 'Tridecanoyl-CoA (C13)', category: 'molecules', chainLength: 13, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Tridecanoyl-CoA (C13)') },
+            'acyl_coa_11': { name: 'Undecanoyl-CoA (C11)', category: 'molecules', chainLength: 11, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Undecanoyl-CoA (C11)') },
+            'acyl_coa_9': { name: 'Nonanoyl-CoA (C9)', category: 'molecules', chainLength: 9, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Nonanoyl-CoA (C9)') },
+            'acyl_coa_7': { name: 'Heptanoyl-CoA (C7)', category: 'molecules', chainLength: 7, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Heptanoyl-CoA (C7)') },
+            'acyl_coa_5': { name: 'Valeroyl-CoA (C5)', category: 'molecules', chainLength: 5, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Valeroyl-CoA (C5)') },
+            'acyl_coa_3': { name: 'Propanoyl-CoA (C3)', category: 'molecules', chainLength: 3, desc: 'Activated fatty acid', render: (id, label) => createAcylCoA(id, label || 'Propanoyl-CoA (C3)') },
+
+            'acetyl_coa': { name: 'Acetyl-CoA', category: 'molecules', desc: 'Central metabolic hub (2C)', render: (id, label) => createAcetylCoA(id, label) },
+            'acetoacetyl_coa': { name: 'Acetoacetyl-CoA', category: 'molecules', desc: 'The precursor of HMG-CoA', render: (id, label) => createAcetoAcetylCoA(id, label) },
+            'hmg_coa': { name: 'HMG-CoA', category: 'molecules', desc: 'Intermediate of cholesterol and ketones', render: (id, label) => createHMGCoA(id, label) },
+            'ketone_body': { name: 'Acetoacetate', category: 'molecules', desc: 'Ketone body', render: (id, label) => createKetone(id, label) },
+            '3_hydroxybutyrate': { name: '3-Hydroxybutyrate', category: 'molecules', desc: 'Ketone body', render: (id, label) => create3HB(id, label) },
+            'mevalonate': { name: 'Mevalonate', category: 'molecules', desc: 'Cholesterol step.', render: (id, label) => createMevalonate(id, label) },
+            'cholesterol': { name: 'Cholesterol', category: 'molecules', desc: 'Steroid.', render: (id, label) => createCholesterol(id, label) },
+            'malonyl_coa': { name: 'Malonyl-CoA', category: 'molecules', desc: 'Synthesis block.', render: (id, label) => createMalonylCoA(id, label) },
+            
+            'atp': { name: 'ATP', category: 'molecules', desc: 'Adenosine triphosphate', render: (id, label) => createMoleculeSmall(id, 'ATP', '#eab308') },
+            'co2': { name: 'CO2', category: 'molecules', desc: 'Carbon dioxide', render: (id, label) => createMoleculeSmall(id, 'CO2', '#64748b') },
+            'nadph': { name: 'NADPH', category: 'molecules', desc: 'Reducing agent', render: (id, label) => createMoleculeSmall(id, 'NADPH', '#f472b6') },
+            'nadh': { name: 'NADH', category: 'molecules', desc: 'Electron carrier.', render: (id, label) => createMoleculeSmall(id, 'NADH', '#8b5cf6') },
+            'fadh2': { name: 'FADH2', category: 'molecules', desc: 'Electron carrier.', render: (id, label) => createMoleculeSmall(id, 'FADH2', '#8b5cf6') },
 
             // --- ENZYMES ---
-            'coa_transferase': {
-                name: 'CoA Transferase', category: 'enzymes',
-                desc: 'Swaps CoA between Succinyl-CoA and Acetoacetate.',
-                bg: '#fce7f3', border: '#db2777',
-                requires: ['succinyl_coa', 'ketone_body'],
-                produces: ['succinate', 'acetoacetyl_coa']
-            },
-            'pyruvate_dehydrogenase': {
-                name: 'Pyruvate Dehydrogenase', category: 'enzymes',
-                desc: 'Links Glycolysis to TCA.',
-                bg: '#cffafe', border: '#0891b2',
-                requires: ['pyruvate'],
-                produces: ['acetyl_coa', 'nadh', 'co2']
-            },
-            'citrate_synthase': {
-                name: 'Citrate Synthase', category: 'enzymes',
-                desc: 'Starts TCA cycle.',
-                bg: '#f0fdf4', border: '#16a34a',
-                requires: ['acetyl_coa', 'oaa'],
-                produces: ['citrate']
-            },
-            'citrate_lyase': {
-                name: 'Citrate Lyase', category: 'enzymes',
-                desc: 'Splits Citrate in cytosol.',
-                bg: '#f0fdf4', border: '#16a34a',
-                requires: ['citrate'],
-                produces: ['acetyl_coa', 'oaa']
-            },
-            'pyruvate_carboxylase': {
-                name: 'Pyruvate Carboxylase', category: 'enzymes',
-                desc: 'Replenishes OAA.',
-                bg: '#fefce8', border: '#ca8a04',
-                requires: ['pyruvate'],
-                produces: ['oaa']
-            },
-            'malate_dehydrogenase': {
-                name: 'Malate Dehydrogenase', category: 'enzymes',
-                desc: 'Reversible conversion of Malate and OAA.',
-                bg: '#e0f2fe', border: '#0284c7',
-                special: true, // Reversible
-                requires: [],
-                produces: []
-            },
-            'malic_enzyme': {
-                name: 'Malic Enzyme', category: 'enzymes',
-                desc: 'Generates NADPH for lipid synthesis.',
-                bg: '#fae8ff', border: '#a21caf',
-                requires: ['malate'],
-                produces: ['pyruvate', 'nadph', 'co2']
-            },
-            'acyltransferase': {
-                name: 'Acyltransferase', category: 'enzymes',
-                desc: 'Forms esters from Fatty Acids.',
-                bg: '#ffedd5', border: '#c2410c',
-                special: true, // Dynamic pairing logic
-                requires: [], // Handled in logic
-                produces: [] 
-            },
-            'lipase': { 
-                name: 'Lipase', category: 'enzymes',
-                desc: 'Hydrolyzes Esters (TAG, DAG, MAG, CE).',
-                bg: '#fef3c7', border: '#d97706',
-                special: true, // Handled in logic
-                requires: [], 
-                produces: [] 
-            },
-            'acyl_synthetase': {
-                name: 'Acyl-CoA Synthetase', category: 'enzymes',
-                desc: 'Activates Fatty Acids with ATP.',
-                bg: '#ffedd5', border: '#c2410c',
-                special: true, 
-                requires: ['atp'], // + Specific FA logic
-                produces: ['amp'] 
-            },
-            'thiolase': {
-                name: 'Thiolase', category: 'enzymes',
-                desc: 'Combines 2 Acetyl-CoA OR splits Acetoacetyl-CoA.',
-                bg: '#e0e7ff', border: '#4338ca',
-                special: true, // Reversible
-                requires: [], // Dynamic check
-                produces: [] 
-            },
-            'hmg_synthase': {
-                name: 'HMG-CoA Synthase', category: 'enzymes',
-                desc: 'Adds Acetyl-CoA to Acetoacetyl-CoA.',
-                bg: '#fae8ff', border: '#86198f',
-                requires: ['acetoacetyl_coa', 'acetyl_coa'], 
-                produces: ['hmg_coa'] 
-            },
-            'hmg_lyase': {
-                name: 'HMG-CoA Lyase', category: 'enzymes',
-                desc: 'Splits HMG-CoA into Ketone Body + Acetyl-CoA.',
-                bg: '#d1fae5', border: '#059669',
-                requires: ['hmg_coa'],
-                produces: ['ketone_body', 'acetyl_coa']
-            },
-            'hmg_reductase': {
-                name: 'HMG-CoA Reductase', category: 'enzymes',
-                desc: 'Reduces HMG-CoA to Mevalonate.',
-                bg: '#fce7f3', border: '#db2777',
-                requires: ['hmg_coa'], 
-                produces: ['mevalonate'] 
-            },
-            '3hb_dehydrogenase': {
-                name: '3-Hydroxybutyrate DH', category: 'enzymes',
-                desc: 'Interconverts Acetoacetate and 3-HB.',
-                bg: '#ccfbf1', border: '#14b8a6',
-                special: true, // Reversible logic
-                requires: [], 
-                produces: [] 
-            },
-            'acc': {
-                name: 'Acetyl-CoA Carboxylase', category: 'enzymes',
-                desc: 'Carboxylates Acetyl-CoA using CO2 & ATP.',
-                bg: '#ecfccb', border: '#65a30d',
-                requires: ['acetyl_coa', 'co2', 'atp'],
-                produces: ['malonyl_coa'] 
-            },
-            'fas': {
-                name: 'Fatty Acid Synthase', category: 'enzymes',
-                desc: 'Elongation: Fatty Acid + Malonyl-CoA + NADPH.',
-                bg: '#dcfce7', border: '#15803d',
-                special: true, 
-                requires: ['malonyl_coa', 'nadph'], // + Starter (Acetyl or FA)
-                produces: [] // Dynamic
-            },
+            'coa_transferase': { name: 'CoA Transferase', category: 'enzymes', desc: 'Transfer of coenzyme A', bg: '#fce7f3', border: '#db2777', requires: ['succinyl_coa', 'ketone_body'], produces: ['succinate', 'acetoacetyl_coa'] },
+            'pyruvate_dehydrogenase': { name: 'Pyruvate Dehydrogenase', category: 'enzymes', desc: 'Produce Acetyl-CoA', bg: '#cffafe', border: '#0891b2', requires: ['pyruvate'], produces: ['acetyl_coa', 'nadh', 'co2'] },
+            'citrate_synthase': { name: 'Citrate Synthase', category: 'enzymes', desc: 'Produce Citrate', bg: '#f0fdf4', border: '#16a34a', requires: ['acetyl_coa', 'oaa'], produces: ['citrate'] },
+            'citrate_lyase': { name: 'Citrate Lyase', category: 'enzymes', desc: 'Produce OAA and Acetyl CoA', bg: '#f0fdf4', border: '#16a34a', requires: ['citrate'], produces: ['acetyl_coa', 'oaa'] },
+            'malic_enzyme': { name: 'Malic Enzyme', category: 'enzymes', desc: 'Produce NADPH', bg: '#fae8ff', border: '#a21caf', requires: ['malate'], produces: ['pyruvate', 'nadph', 'co2'] },
+            'acyltransferase': { name: 'Acyltransferase', category: 'enzymes', desc: 'Esterification of fatty acids', bg: '#ffedd5', border: '#c2410c', special: true, requires: [], produces: [] },
+            'lipase': { name: 'Lipase', category: 'enzymes', desc: 'Generic lipase hydrolyse lipids', bg: '#fef3c7', border: '#d97706', special: true, requires: [], produces: [] },
+            'acyl_synthetase': { name: 'Acyl-CoA Synthetase', category: 'enzymes', desc: 'Activate FA.', bg: '#ffedd5', border: '#c2410c', special: true, requires: ['atp'], produces: ['amp'] },
+            'thiolase': { name: 'Thiolase', category: 'enzymes', desc: 'Cleavage/condensation', bg: '#e0e7ff', border: '#4338ca', special: true, requires: [], produces: [] },
+            'hmg_synthase': { name: 'HMG-CoA Synthase', category: 'enzymes', desc: 'Produce HMG Co-A', bg: '#fae8ff', border: '#86198f', requires: ['acetoacetyl_coa', 'acetyl_coa'], produces: ['hmg_coa'] },
+            'hmg_lyase': { name: 'HMG-CoA Lyase', category: 'enzymes', desc: 'Produce Ketone bodies', bg: '#d1fae5', border: '#059669', requires: ['hmg_coa'], produces: ['ketone_body', 'acetyl_coa'] },
+            'hmg_reductase': { name: 'HMG-CoA Reductase', category: 'enzymes', desc: 'Produce Mevalonate', bg: '#fce7f3', border: '#db2777', requires: ['hmg_coa'], produces: ['mevalonate'] },
+            '3hb_dehydrogenase': { name: '3-HB Dehydrogenase', category: 'enzymes', desc: 'Ketone Redox.', bg: '#ccfbf1', border: '#14b8a6', special: true, requires: [], produces: [] },
+            'acc': { name: 'Acetyl-CoA Carboxylase', category: 'enzymes', desc: 'Produce Malanyl-coA', bg: '#ecfccb', border: '#65a30d', requires: ['acetyl_coa', 'co2', 'atp'], produces: ['malonyl_coa'] },
+            'fas': { name: 'Fatty Acid Synthase', category: 'enzymes', desc: 'Multienzymatic complex', bg: '#dcfce7', border: '#15803d', special: true, requires: ['malonyl_coa', 'nadph'], produces: [] },
+            'pyruvate_carboxylase': { name: 'Pyruvate Carboxylase', category: 'enzymes', desc: 'Replenishes OAA.', bg: '#fefce8', border: '#ca8a04', requires: ['pyruvate'], produces: ['oaa'] },
+            'malate_dehydrogenase': { name: 'Malate Dehydrogenase', category: 'enzymes', desc: 'Reversible conversion.', bg: '#e0f2fe', border: '#0284c7', special: true, requires: [], produces: [] },
 
             // --- PATHWAYS ---
-            'glycolysis': {
-                name: 'Glycolysis', category: 'pathways',
-                desc: 'Glucose -> 2 Pyruvate + 2 NADH + ATP',
-                bg: '#dbeafe', border: '#1d4ed8',
-                requires: ['glucose'],
-                produces: ['pyruvate', 'pyruvate', 'nadh', 'nadh', 'atp']
-            },
-            'etc': {
-                name: 'Electron Transport Chain', category: 'pathways',
-                desc: 'Oxidative Phosphorylation. NADH->3ATP, FADH2->2ATP',
-                bg: '#e0e7ff', border: '#4338ca',
-                special: true, // Logic for NADH/FADH2
-                requires: [],
-                produces: []
-            },
-            'beta_oxidation': {
-                name: 'Beta-Oxidation', category: 'pathways',
-                desc: 'Breaks Acyl-CoA into Acetyl-CoA.',
-                bg: '#ffedd5', border: '#c2410c',
-                special: true, 
-                requires: [], // Dynamic Acyl-CoA check
-                produces: ['acetyl_coa', 'nadh', 'fadh2'] 
-            },
-            'cholesterol_synth': {
-                name: 'Cholesterol Pathway', category: 'pathways',
-                desc: 'Multi-step synthesis from Mevalonate.',
-                bg: '#fdf2f8', border: '#be185d',
-                requires: ['mevalonate', 'atp'], 
-                produces: ['cholesterol'] // SIMPLIFIED OUTPUT
-            },
-            'tca_cycle': {
-                name: 'TCA Cycle', category: 'pathways',
-                desc: 'Citric Acid Cycle. Oxidizes Acetyl-CoA.',
-                bg: '#f3f4f6', border: '#475569',
-                requires: ['acetyl_coa'], 
-                produces: ['co2', 'co2', 'atp', 'fadh2', 'nadh', 'nadh', 'nadh'] // Updated products
-            },
-            'spontaneous_pathway': {
-                name: 'Spontaneous', category: 'pathways',
-                desc: 'A reaction that can occur by itself.',
-                bg: '#fef2f2', border: '#ef4444',
-                requires: ['ketone_body'],
-                produces: ['acetone', 'co2']
-            }
+            'glycolysis': { name: 'Glycolysis', category: 'pathways', desc: 'Glucose Breakdown.', bg: '#dbeafe', border: '#1d4ed8', requires: ['glucose'], produces: ['pyruvate', 'pyruvate', 'nadh', 'nadh', 'atp'] },
+            'etc': { name: 'Electron Transport Chain', category: 'pathways', desc: 'Oxidative phosphorylation', bg: '#e0e7ff', border: '#4338ca', special: true, requires: [], produces: [] },
+            'beta_oxidation': { name: 'Beta-Oxidation', category: 'pathways', desc: 'Major pathway to breakdown FA', bg: '#ffedd5', border: '#c2410c', special: true, requires: [], produces: ['acetyl_coa', 'nadh', 'fadh2'] },
+            'cholesterol_synth': { name: 'Cholesterol Pathway', category: 'pathways', desc: 'Multi steps process', bg: '#fdf2f8', border: '#be185d', requires: ['mevalonate', 'atp'], produces: ['cholesterol'] },
+            'tca_cycle': { name: 'TCA Cycle', category: 'pathways', desc: 'Citric acid cycle/Krebs cycle', bg: '#f3f4f6', border: '#475569', requires: ['acetyl_coa'], produces: ['co2', 'co2', 'atp', 'fadh2', 'nadh', 'nadh', 'nadh'] },
+            'spontaneous_pathway': { name: 'Spontaneous', category: 'pathways', desc: 'A reaction that occur by itself', bg: '#fef2f2', border: '#ef4444', requires: ['ketone_body'], produces: ['acetone', 'co2'] }
         };
 
         // --- STATE ---
         let currentTab = 'molecules';
         let workbenchItems = []; 
         let nextId = 0;
-        let dragItem = null;
-        let dragOffsetX = 0;
-        let dragOffsetY = 0;
+        
+        // Drag State
+        let dragState = {
+            active: false,
+            item: null, // The data object
+            element: null, // The visual DOM element
+            source: 'workbench',
+            dropTargets: [], // Cached targets for better performance
+            trashRect: null 
+        };
 
         // --- INIT ---
         function init() {
             renderInventory();
             
-            // Search Listener
             document.getElementById('search-bar').addEventListener('input', (e) => {
                 renderInventory(e.target.value);
             });
 
-            // Listeners
-            document.addEventListener('mousedown', handleMouseDown);
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-            document.addEventListener('touchstart', handleTouchStart, {passive: false});
-            document.addEventListener('touchmove', handleTouchMove, {passive: false});
-            document.addEventListener('touchend', handleMouseUp);
+            // Global Events for Dragging
+            document.addEventListener('mousedown', handleGlobalStart);
+            document.addEventListener('touchstart', handleGlobalStart, {passive: false});
+            
+            document.addEventListener('mousemove', handleGlobalMove);
+            document.addEventListener('touchmove', handleGlobalMove, {passive: false});
+            
+            document.addEventListener('mouseup', handleGlobalEnd);
+            document.addEventListener('touchend', handleGlobalEnd);
         }
 
         function closeDisclaimer() {
@@ -596,17 +380,26 @@
 
         function resetGame() {
             workbenchItems = [];
-            const wb = document.getElementById('workbench');
-            wb.innerHTML = `
-            <div class="absolute top-4 left-4 text-orange-300 font-bold text-lg opacity-50 pointer-events-none select-none">
-                LIPID WORKBENCH
+            document.getElementById('workbench').innerHTML = `
+            <div class="absolute top-4 left-4 text-orange-300 font-bold text-lg opacity-50 pointer-events-none select-none hidden md:block">
+                WORKBENCH
             </div>
-            <div id="tutorial-msg" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div class="bg-white/90 backdrop-blur px-8 py-6 rounded-2xl text-slate-600 text-center shadow-md border-2 border-orange-100 max-w-md">
-                    <p class="font-bold text-xl mb-2 text-orange-800">Lipid Metabolism Sandbox</p>
-                    <p class="text-sm mb-2">Drag <b>Molecules</b>, <b>Enzymes</b>, or <b>Pathways</b> from the tabs.</p>
-                    <p class="text-sm mb-2">Combine them to see metabolic reactions!</p>
+            <div id="tutorial-msg" class="absolute inset-0 flex items-center justify-center pointer-events-none p-6">
+                <div class="bg-white/80 backdrop-blur-sm px-6 py-6 rounded-2xl text-slate-600 text-center shadow-lg border-2 border-orange-100 max-w-sm">
+                    <p class="font-bold text-lg mb-2 text-orange-800">Start Experimenting!</p>
+                    <p class="text-sm leading-relaxed">Click items in the inventory to add them.</p>
                 </div>
+            </div>
+            <div id="trash-bin" class="trash-bin absolute bottom-12 right-4 w-16 h-16 md:w-20 md:h-20 bg-white/80 backdrop-blur rounded-2xl flex items-center justify-center shadow-lg z-10 transition-colors">
+                <div class="pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-auto w-full text-center text-[10px] text-slate-400 p-2 pointer-events-none select-none bg-orange-50/30">
+                © 2025 Wong Gou Rean. All rights reserved.
             </div>`;
         }
 
@@ -619,287 +412,12 @@
             renderInventory();
         }
 
-        // --- SVG ART ---
-        const svgStart = (w, h) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" class="pointer-events-none">`;
-        
-        // New/Updated Render Functions
-        function createGlucose(id, label) {
-             let s = svgStart(50, 50);
-             // Hexagon
-             s += `<polygon points="25,5 45,15 45,35 25,45 5,35 5,15" fill="none" stroke="#3b82f6" stroke-width="3" />`;
-             s += `</svg>`;
-             return wrapIcon(id, s, label);
-        }
-        
-        function createPyruvate(id, label) {
-             let s = svgStart(50, 50);
-             // 3C Chain
-             s += `<circle cx="15" cy="25" r="6" class="atom-c" />`;
-             s += `<circle cx="25" cy="25" r="6" class="atom-c" />`;
-             s += `<circle cx="35" cy="25" r="6" class="atom-c" />`;
-             s += `</svg>`;
-             return wrapIcon(id, s, label);
-        }
-
-        // Simplified Cholesterol (4 Squares)
-        function createCholesterol(id, label) {
-            let s = svgStart(90, 60);
-            const strokeColor = "#eab308"; // Yellow
-
-            s += `<rect x="15" y="25" width="15" height="15" fill="none" stroke="${strokeColor}" stroke-width="2" />`;
-            s += `<rect x="30" y="25" width="15" height="15" fill="none" stroke="${strokeColor}" stroke-width="2" />`;
-            s += `<rect x="45" y="25" width="15" height="15" fill="none" stroke="${strokeColor}" stroke-width="2" />`;
-            s += `<rect x="60" y="25" width="15" height="15" fill="none" stroke="${strokeColor}" stroke-width="2" />`;
-
-            // OH group
-            s += `<text x="5" y="50" font-size="8" fill="#ec4899" font-weight="bold">HO</text>`;
-            s += `<line x1="15" y1="40" x2="10" y2="45" stroke="#ec4899" stroke-width="2" />`;
-            
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'Cholesterol');
-        }
-
-        // --- CORRECTED CHOLESTERYL ESTER SVG (Simplified 4 squares) ---
-        function createCholesterylEster(id, label) {
-             let s = svgStart(100, 70);
-             const strokeColor = "#eab308";
-             
-             // 4 squares
-             s += `<rect x="15" y="25" width="15" height="15" fill="none" stroke="${strokeColor}" stroke-width="2" />`;
-             s += `<rect x="30" y="25" width="15" height="15" fill="none" stroke="${strokeColor}" stroke-width="2" />`;
-             s += `<rect x="45" y="25" width="15" height="15" fill="none" stroke="${strokeColor}" stroke-width="2" />`;
-             s += `<rect x="60" y="25" width="15" height="15" fill="none" stroke="${strokeColor}" stroke-width="2" />`;
- 
-             // Ester tail
-             s += `<line x1="15" y1="40" x2="10" y2="45" stroke="#f472b6" stroke-width="2" />`;
-             s += `<path d="M10,45 L5,50 L0,45 L-5,50" stroke="#ea580c" stroke-width="2" fill="none" transform="translate(5,0)" />`;
-             
-             s += `</svg>`;
-             return wrapIcon(id, s, label || 'Cholesteryl Ester');
-        }
-
-
-        function createSuccinylCoA(id, label) { return createGenericCoA(id, label, '#8b5cf6'); }
-        function createSuccinate(id, label) { return createGenericMolecule(id, label, '#8b5cf6'); }
-        function createCitrate(id, label) { return createGenericMolecule(id, label, '#f59e0b'); }
-        function createOAA(id, label) { return createGenericMolecule(id, label, '#10b981'); }
-        function createMalate(id, label) { return createGenericMolecule(id, label, '#3b82f6'); }
-
-        function createGenericCoA(id, label, color) {
-            let s = svgStart(60, 40);
-            s += `<rect x="10" y="10" width="40" height="20" rx="4" fill="white" stroke="${color}" stroke-width="2" />`;
-             s += `<text x="30" y="24" font-size="8" fill="${color}" text-anchor="middle">CoA</text>`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label);
-        }
-        function createGenericMolecule(id, label, color) {
-            let s = svgStart(50, 50);
-            s += `<circle cx="25" cy="25" r="15" fill="white" stroke="${color}" stroke-width="2"/>`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label);
-        }
-
-        function createTAG(id, label) {
-            let s = svgStart(80, 80);
-            s += `<path d="M10,10 L10,70" stroke="#94a3b8" stroke-width="6" stroke-linecap="round"/>`;
-            s += `<path d="M10,20 L30,20 L35,25 L45,15 L55,25 L65,15 L70,20" class="lipid-stroke" />`;
-            s += `<path d="M10,40 L30,40 L35,45 L45,35 L55,45 L65,35 L70,40" class="lipid-stroke" />`;
-            s += `<path d="M10,60 L30,60 L35,65 L45,55 L55,65 L65,55 L70,60" class="lipid-stroke" />`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'Triglyceride');
-        }
-        
-        function createDAG(id, label) {
-            let s = svgStart(80, 80);
-            s += `<path d="M10,10 L10,70" stroke="#94a3b8" stroke-width="6" stroke-linecap="round"/>`;
-            s += `<path d="M10,20 L30,20 L35,25 L45,15 L55,25 L65,15 L70,20" class="lipid-stroke" />`;
-            s += `<path d="M10,40 L30,40 L35,45 L45,35 L55,45 L65,35 L70,40" class="lipid-stroke" />`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'Diacylglycerol');
-        }
-        
-        function createMAG(id, label) {
-            let s = svgStart(80, 80);
-            s += `<path d="M10,10 L10,70" stroke="#94a3b8" stroke-width="6" stroke-linecap="round"/>`;
-            s += `<path d="M10,20 L30,20 L35,25 L45,15 L55,25 L65,15 L70,20" class="lipid-stroke" />`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'Monoacylglycerol');
-        }
-        
-        function createFattyAcid(id, zigs, label) {
-            let s = svgStart(80, 40);
-            let path = `M5,20 `;
-            for(let i=0; i<zigs; i++) {
-                path += `l10,-10 l10,10 `;
-            }
-            s += `<path d="${path}" class="lipid-stroke" fill="none" />`;
-            s += `<circle cx="5" cy="20" r="4" fill="#ef4444" />`;
-            s += `</svg>`;
-            let displayLabel = label;
-            if (!displayLabel) {
-               if (ELEMENTS[id]) displayLabel = ELEMENTS[id].name;
-               else displayLabel = 'Fatty Acid';
-            }
-            return wrapIcon(id, s, displayLabel);
-        }
-
-        function createAcetylCoA(id, label) {
-            let s = svgStart(60, 40);
-            s += `<rect x="30" y="10" width="25" height="20" rx="4" fill="#94a3b8" />`;
-            s += `<text x="42" y="24" font-size="8" fill="white" text-anchor="middle">CoA</text>`;
-            s += `<line x1="15" y1="20" x2="30" y2="20" stroke="#333" stroke-width="2" />`;
-            // Updated to 2 Blue dots
-            s += `<circle cx="10" cy="20" r="5" class="atom-c" />`;
-            s += `<circle cx="20" cy="20" r="5" class="atom-c" />`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'Acetyl-CoA');
-        }
-
-        function createAcylCoA(id, label) {
-            let s = svgStart(80, 40);
-            s += `<rect x="50" y="10" width="25" height="20" rx="4" fill="#ea580c" />`;
-            s += `<text x="62" y="24" font-size="8" fill="white" text-anchor="middle">CoA</text>`;
-            s += `<path d="M5,20 L15,10 L25,30 L35,10 L45,30 L50,20" class="lipid-stroke" />`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'Acyl-CoA');
-        }
-
-        function createGlycerol(id, label) {
-            let s = svgStart(40, 60);
-            s += `<line x1="20" y1="10" x2="20" y2="50" stroke="#94a3b8" stroke-width="6" stroke-linecap="round" />`;
-            s += `<circle cx="20" cy="15" r="4" fill="white" stroke="#94a3b8" stroke-width="2"/>`;
-            s += `<circle cx="20" cy="30" r="4" fill="white" stroke="#94a3b8" stroke-width="2"/>`;
-            s += `<circle cx="20" cy="45" r="4" fill="white" stroke="#94a3b8" stroke-width="2"/>`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'Glycerol');
-        }
-
-        function createAcetoAcetylCoA(id, label) {
-            let s = svgStart(70, 40);
-            s += `<rect x="40" y="10" width="25" height="20" rx="4" fill="#94a3b8" />`;
-            s += `<text x="52" y="24" font-size="8" fill="white" text-anchor="middle">CoA</text>`;
-            s += `<circle cx="10" cy="20" r="5" class="atom-c" />`;
-            s += `<circle cx="20" cy="20" r="5" class="atom-c" />`;
-            s += `<circle cx="30" cy="20" r="5" class="atom-c" />`;
-            s += `<circle cx="40" cy="20" r="5" class="atom-c" />`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'Acetoacetyl-CoA');
-        }
-
-        function createHMGCoA(id, label) {
-            let s = svgStart(70, 50);
-            s += `<rect x="40" y="25" width="25" height="15" rx="4" fill="#94a3b8" />`;
-            s += `<text x="52" y="35" font-size="7" fill="white" text-anchor="middle">CoA</text>`;
-            s += `<line x1="20" y1="30" x2="40" y2="30" stroke="#333" stroke-width="2" />`;
-            s += `<line x1="20" y1="30" x2="20" y2="15" stroke="#333" stroke-width="2" />`;
-            s += `<line x1="20" y1="15" x2="30" y2="5" stroke="#333" stroke-width="2" />`;
-            s += `<circle cx="20" cy="30" r="5" class="atom-c" />`;
-            s += `<circle cx="30" cy="30" r="5" class="atom-c" />`;
-            s += `<circle cx="40" cy="30" r="5" class="atom-c" />`;
-            s += `<circle cx="20" cy="15" r="5" class="atom-c" />`;
-            s += `<circle cx="30" cy="5" r="5" fill="#ec4899" />`; 
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'HMG-CoA');
-        }
-
-        function createKetone(id, label) {
-            let s = svgStart(60, 40);
-            s += `<circle cx="15" cy="20" r="6" class="atom-c" />`;
-            s += `<circle cx="25" cy="20" r="6" class="atom-c" />`;
-            s += `<circle cx="35" cy="20" r="6" class="atom-c" />`;
-            s += `<circle cx="45" cy="20" r="6" class="atom-c" />`;
-            s += `<circle cx="25" cy="10" r="4" class="atom-o" />`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'Acetoacetate');
-        }
-
-        function create3HB(id, label) {
-            let s = svgStart(60, 40);
-            s += `<circle cx="15" cy="20" r="6" class="atom-c" />`;
-            s += `<circle cx="25" cy="20" r="6" class="atom-c" />`;
-            s += `<circle cx="35" cy="20" r="6" class="atom-c" />`;
-            s += `<circle cx="45" cy="20" r="6" class="atom-c" />`;
-            s += `<circle cx="25" cy="12" r="3" fill="#ffffff" stroke="#1e293b" stroke-width="2" />`; // OH
-            s += `</svg>`;
-            return wrapIcon(id, s, label || '3-Hydroxybutyrate');
-        }
-
-        function createAcetone(id, label) {
-            let s = svgStart(50, 40);
-            s += `<circle cx="10" cy="25" r="6" class="atom-c" />`;
-            s += `<circle cx="25" cy="25" r="6" class="atom-c" />`;
-            s += `<circle cx="40" cy="25" r="6" class="atom-c" />`;
-            s += `<circle cx="25" cy="15" r="4" class="atom-o" />`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'Acetone');
-        }
-
-        function createMalonylCoA(id, label) {
-            let s = svgStart(60, 40);
-            s += `<rect x="35" y="10" width="20" height="20" rx="4" fill="#94a3b8" />`; 
-            s += `<text x="45" y="24" font-size="7" fill="white" text-anchor="middle">CoA</text>`;
-            s += `<circle cx="10" cy="20" r="5" class="atom-c" />`;
-            s += `<circle cx="20" cy="20" r="5" class="atom-c" />`;
-            s += `<circle cx="30" cy="20" r="5" class="atom-c" />`;
-            s += `<circle cx="10" cy="10" r="4" class="atom-o" />`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'Malonyl-CoA');
-        }
-
-        function createMevalonate(id, label) {
-            let s = svgStart(60, 60);
-            s += `<path d="M10,50 L20,40 L20,20 L30,10" fill="none" stroke="#ec4899" stroke-width="3" />`;
-            s += `<circle cx="20" cy="20" r="6" fill="#ec4899" />`;
-            s += `<circle cx="40" cy="50" r="6" fill="#ec4899" />`;
-            s += `<path d="M20,40 L40,50" stroke="#ec4899" stroke-width="3" />`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label || 'Mevalonate');
-        }
-
-        function createMoleculeSmall(id, label, color) {
-            let s = svgStart(50, 50);
-            s += `<circle cx="25" cy="25" r="20" fill="${color}" fill-opacity="0.2" stroke="${color}" stroke-width="2" />`;
-            s += `<text x="25" y="28" font-size="10" font-weight="bold" fill="${color}" text-anchor="middle">${label}</text>`;
-            s += `</svg>`;
-            return wrapIcon(id, s, label);
-        }
-
-        function wrapIcon(id, svgContent, label) {
-            return `
-            <div id="${id}" class="molecule flex flex-col items-center justify-center select-none w-24 h-24 transition-all">
-                <div class="transform hover:scale-110 transition-transform">
-                    ${svgContent}
-                </div>
-                <span class="mt-1 text-[10px] font-bold bg-white/90 px-2 py-0.5 rounded-full text-slate-600 shadow-sm whitespace-nowrap border border-slate-100">${label}</span>
-                <span class="hidden element-id">${id}</span>
-            </div>`;
-        }
-
-        function createEnzymeBox(id, elemId) {
-            const data = ELEMENTS[elemId];
-            const isPathway = data.category === 'pathways';
-            const extraClass = isPathway ? 'pathway' : '';
-
-            return `
-            <div id="${id}" class="molecule enzyme-box ${extraClass} select-none" style="width: 200px; height: 180px;">
-                <div class="text-xs font-bold uppercase tracking-widest ${isPathway ? 'text-pink-700' : 'text-slate-500'} mb-2 pointer-events-none text-center px-2">${data.name}</div>
-                
-                <div class="flex flex-wrap justify-center gap-1 w-full px-2 pointer-events-none min-h-[60px]" id="${id}-contents">
-                    <span class="text-[10px] text-slate-400 italic">Drag ingredients here</span>
-                </div>
-                <div class="mt-2 text-[9px] text-slate-400 text-center w-full px-2">
-                    Needs: ${data.requires.map(r=>ELEMENTS[r] ? ELEMENTS[r].name : r).join(', ')}
-                </div>
-            </div>`;
-        }
-
         // --- RENDER INVENTORY ---
         function renderInventory(filter = "") {
             const list = document.getElementById('inventory-list');
             list.innerHTML = '';
             
             const term = filter.toLowerCase();
-            
             let keys = Object.keys(ELEMENTS).filter(key => {
                 const item = ELEMENTS[key];
                 if(item.category !== currentTab) return false;
@@ -907,351 +425,456 @@
                 return true;
             });
 
+            // Sort
             keys.sort((a, b) => {
                 const itemA = ELEMENTS[a];
                 const itemB = ELEMENTS[b];
-                
                 const getLength = (item, id) => {
                      if (item.chainLength) return item.chainLength;
                      const match = id.match(/_(\d+)$/);
                      return match ? parseInt(match[1]) : 0;
                 };
-
                 const lenA = getLength(itemA, a);
                 const lenB = getLength(itemB, b);
-                
-                if (lenA > 0 && lenB > 0) {
-                    return lenB - lenA;
-                }
+                if (lenA > 0 && lenB > 0) return lenB - lenA;
                 return itemA.name.localeCompare(itemB.name);
             });
 
             keys.forEach(key => {
                 const item = ELEMENTS[key];
                 const div = document.createElement('div');
-                div.className = 'inventory-item p-3 rounded-xl flex flex-row items-center gap-3 border border-orange-100 bg-white mb-2 shadow-sm relative group cursor-pointer';
-                
-                let iconHTML = '';
-                if(item.category === 'molecules') {
-                    iconHTML = `<div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">${item.name.substring(0,2)}</div>`;
-                } else {
-                    iconHTML = `<div class="w-8 h-8 rounded bg-slate-50 border border-dashed border-slate-400 flex items-center justify-center text-[10px]">⚙️</div>`;
-                }
+                div.className = 'inventory-item p-3 rounded-xl flex items-center gap-3 border border-orange-100 bg-white shadow-sm relative cursor-pointer active:scale-95 select-none hover:bg-orange-50';
+                div.dataset.elemId = key;
+
+                let iconHTML = item.category === 'molecules' 
+                    ? `<div class="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">${item.name.substring(0,2)}</div>`
+                    : `<div class="w-10 h-10 rounded bg-slate-50 border border-dashed border-slate-400 flex items-center justify-center text-xs shrink-0">⚙️</div>`;
 
                 div.innerHTML = `
                     ${iconHTML}
-                    <div class="flex-1">
-                        <div class="text-xs font-bold text-slate-700">${item.name}</div>
-                        <div class="text-[10px] text-slate-400 line-clamp-1">${item.desc}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-bold text-slate-700 truncate">${item.name}</div>
+                        <div class="text-[10px] text-slate-400 truncate">${item.desc}</div>
                     </div>
                 `;
-
-                div.onmousedown = (e) => startDragFromInventory(e, key);
-                div.ontouchstart = (e) => startDragFromInventory(e, key);
-
+                
+                // Click to spawn instead of Drag
+                div.onclick = () => spawnItemFromInventory(key);
                 list.appendChild(div);
             });
         }
 
-        // --- DRAG DROP LOGIC ---
-        function startDragFromInventory(e, elemId) {
-            e.preventDefault();
-            const touch = e.touches ? e.touches[0] : e;
-            const wb = document.getElementById('workbench');
-            const rect = wb.getBoundingClientRect();
-            
-            const uid = 'obj-' + (nextId++);
-            const x = touch.clientX - rect.left - 40;
-            const y = touch.clientY - rect.top - 40;
+        // --- SVG FACTORIES ---
+        const svgStart = (w, h) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" class="pointer-events-none block">`;
 
+        function createGenericMolecule(id, label, color) { return wrapIcon(id, `${svgStart(50,50)}<circle cx="25" cy="25" r="15" fill="white" stroke="${color}" stroke-width="2"/></svg>`, label); }
+        function createMoleculeSmall(id, label, color) { return wrapIcon(id, `${svgStart(50,50)}<circle cx="25" cy="25" r="20" fill="${color}" fill-opacity="0.2" stroke="${color}" stroke-width="2"/><text x="25" y="29" font-size="10" font-weight="bold" fill="${color}" text-anchor="middle">${label}</text></svg>`, label); }
+        function createGlucose(id, label) { return wrapIcon(id, `${svgStart(50,50)}<polygon points="25,5 45,15 45,35 25,45 5,35 5,15" fill="none" stroke="#3b82f6" stroke-width="3" /></svg>`, label); }
+        function createPyruvate(id, label) { return wrapIcon(id, `${svgStart(50,50)}<circle cx="15" cy="25" r="6" class="atom-c"/><circle cx="25" cy="25" r="6" class="atom-c"/><circle cx="35" cy="25" r="6" class="atom-c"/></svg>`, label); }
+        
+        function createTAG(id, label) {
+            return wrapIcon(id, `${svgStart(80,80)}<path d="M10,10 L10,70" stroke="#94a3b8" stroke-width="6" stroke-linecap="round"/><path d="M10,20 L30,20 L35,25 L45,15 L55,25 L65,15 L70,20" class="lipid-stroke"/><path d="M10,40 L30,40 L35,45 L45,35 L55,45 L65,35 L70,40" class="lipid-stroke"/><path d="M10,60 L30,60 L35,65 L45,55 L55,65 L65,55 L70,60" class="lipid-stroke"/></svg>`, label || 'TAG');
+        }
+        function createDAG(id, label) { return wrapIcon(id, `${svgStart(80,80)}<path d="M10,10 L10,70" stroke="#94a3b8" stroke-width="6" stroke-linecap="round"/><path d="M10,20 L30,20 L35,25 L45,15 L55,25 L65,15 L70,20" class="lipid-stroke"/><path d="M10,40 L30,40 L35,45 L45,35 L55,45 L65,35 L70,40" class="lipid-stroke"/></svg>`, label || 'DAG'); }
+        function createMAG(id, label) { return wrapIcon(id, `${svgStart(80,80)}<path d="M10,10 L10,70" stroke="#94a3b8" stroke-width="6" stroke-linecap="round"/><path d="M10,20 L30,20 L35,25 L45,15 L55,25 L65,15 L70,20" class="lipid-stroke"/></svg>`, label || 'MAG'); }
+        
+        function createFattyAcid(id, zigs, label) {
+            let path = `M5,20 `;
+            for(let i=0; i<zigs; i++) path += `l10,-10 l10,10 `;
+            return wrapIcon(id, `${svgStart(80,40)}<path d="${path}" class="lipid-stroke" fill="none"/><circle cx="5" cy="20" r="4" fill="#ef4444"/></svg>`, label);
+        }
+        
+        function createAcylCoA(id, label) {
+            return wrapIcon(id, `${svgStart(80,40)}<rect x="50" y="10" width="25" height="20" rx="4" fill="#ea580c"/><text x="62" y="24" font-size="8" fill="white" text-anchor="middle">CoA</text><path d="M5,20 L15,10 L25,30 L35,10 L45,30 L50,20" class="lipid-stroke"/></svg>`, label);
+        }
+        
+        function createAcetylCoA(id, label) {
+            return wrapIcon(id, `${svgStart(60,40)}<rect x="30" y="10" width="25" height="20" rx="4" fill="#94a3b8"/><text x="42" y="24" font-size="8" fill="white" text-anchor="middle">CoA</text><line x1="15" y1="20" x2="30" y2="20" stroke="#333" stroke-width="2"/><circle cx="10" cy="20" r="5" class="atom-c"/><circle cx="20" cy="20" r="5" class="atom-c"/></svg>`, label || 'Acetyl-CoA');
+        }
+
+        // Helper Wrappers
+        function createSuccinylCoA(id, l){ return wrapIcon(id, `${svgStart(60,40)}<rect x="10" y="10" width="40" height="20" rx="4" fill="white" stroke="#8b5cf6" stroke-width="2"/><text x="30" y="24" font-size="8" fill="#8b5cf6" text-anchor="middle">CoA</text></svg>`, l); }
+        function createSuccinate(id, l){ return createGenericMolecule(id,l,'#8b5cf6'); }
+        function createCitrate(id, l){ return createGenericMolecule(id,l,'#f59e0b'); }
+        function createOAA(id, l){ return createGenericMolecule(id,l,'#10b981'); }
+        function createMalate(id, l){ return createGenericMolecule(id,l,'#3b82f6'); }
+        function createGlycerol(id, l){ return wrapIcon(id, `${svgStart(40,60)}<line x1="20" y1="10" x2="20" y2="50" stroke="#94a3b8" stroke-width="6" stroke-linecap="round"/><circle cx="20" cy="15" r="4" fill="white" stroke="#94a3b8" stroke-width="2"/><circle cx="20" cy="30" r="4" fill="white" stroke="#94a3b8" stroke-width="2"/><circle cx="20" cy="45" r="4" fill="white" stroke="#94a3b8" stroke-width="2"/></svg>`, l); }
+        function createAcetoAcetylCoA(id, l){ return wrapIcon(id, `${svgStart(70,40)}<rect x="40" y="10" width="25" height="20" rx="4" fill="#94a3b8"/><text x="52" y="24" font-size="8" fill="white" text-anchor="middle">CoA</text><circle cx="10" cy="20" r="5" class="atom-c"/><circle cx="20" cy="20" r="5" class="atom-c"/><circle cx="30" cy="20" r="5" class="atom-c"/><circle cx="40" cy="20" r="5" class="atom-c"/></svg>`, l); }
+        function createHMGCoA(id, l){ return wrapIcon(id, `${svgStart(70,50)}<rect x="40" y="25" width="25" height="15" rx="4" fill="#94a3b8"/><text x="52" y="35" font-size="7" fill="white" text-anchor="middle">CoA</text><path d="M20,30 L40,30 M20,30 L20,15 L30,5" stroke="#333" stroke-width="2"/><circle cx="20" cy="30" r="5" class="atom-c"/><circle cx="30" cy="30" r="5" class="atom-c"/><circle cx="40" cy="30" r="5" class="atom-c"/><circle cx="20" cy="15" r="5" class="atom-c"/><circle cx="30" cy="5" r="5" fill="#ec4899"/></svg>`, l); }
+        function createKetone(id, l){ return wrapIcon(id, `${svgStart(60,40)}<circle cx="15" cy="20" r="6" class="atom-c"/><circle cx="25" cy="20" r="6" class="atom-c"/><circle cx="35" cy="20" r="6" class="atom-c"/><circle cx="45" cy="20" r="6" class="atom-c"/><circle cx="25" cy="10" r="4" class="atom-o"/></svg>`, l); }
+        function create3HB(id, l){ return wrapIcon(id, `${svgStart(60,40)}<circle cx="15" cy="20" r="6" class="atom-c"/><circle cx="25" cy="20" r="6" class="atom-c"/><circle cx="35" cy="20" r="6" class="atom-c"/><circle cx="45" cy="20" r="6" class="atom-c"/><circle cx="25" cy="12" r="3" fill="#ffffff" stroke="#1e293b" stroke-width="2"/></svg>`, l); }
+        function createAcetone(id, l){ return wrapIcon(id, `${svgStart(50,40)}<circle cx="10" cy="25" r="6" class="atom-c"/><circle cx="25" cy="25" r="6" class="atom-c"/><circle cx="40" cy="25" r="6" class="atom-c"/><circle cx="25" cy="15" r="4" class="atom-o"/></svg>`, l); }
+        function createMalonylCoA(id, l){ return wrapIcon(id, `${svgStart(60,40)}<rect x="35" y="10" width="20" height="20" rx="4" fill="#94a3b8"/><text x="45" y="24" font-size="7" fill="white" text-anchor="middle">CoA</text><circle cx="10" cy="20" r="5" class="atom-c"/><circle cx="20" cy="20" r="5" class="atom-c"/><circle cx="30" cy="20" r="5" class="atom-c"/><circle cx="10" cy="10" r="4" class="atom-o"/></svg>`, l); }
+        function createMevalonate(id, l){ return wrapIcon(id, `${svgStart(60,60)}<path d="M10,50 L20,40 L20,20 L30,10" fill="none" stroke="#ec4899" stroke-width="3"/><circle cx="20" cy="20" r="6" fill="#ec4899"/><circle cx="40" cy="50" r="6" fill="#ec4899"/><path d="M20,40 L40,50" stroke="#ec4899" stroke-width="3"/></svg>`, l); }
+        function createCholesterol(id, l){ return wrapIcon(id, `${svgStart(90,60)}<rect x="15" y="25" width="15" height="15" fill="none" stroke="#eab308" stroke-width="2"/><rect x="30" y="25" width="15" height="15" fill="none" stroke="#eab308" stroke-width="2"/><rect x="45" y="25" width="15" height="15" fill="none" stroke="#eab308" stroke-width="2"/><rect x="60" y="25" width="15" height="15" fill="none" stroke="#eab308" stroke-width="2"/><text x="5" y="50" font-size="8" fill="#ec4899" font-weight="bold">HO</text><line x1="15" y1="40" x2="10" y2="45" stroke="#ec4899" stroke-width="2"/>`, l); }
+        function createCholesterylEster(id, l){ return wrapIcon(id, `${svgStart(100,70)}<rect x="15" y="25" width="15" height="15" fill="none" stroke="#eab308" stroke-width="2"/><rect x="30" y="25" width="15" height="15" fill="none" stroke="#eab308" stroke-width="2"/><rect x="45" y="25" width="15" height="15" fill="none" stroke="#eab308" stroke-width="2"/><rect x="60" y="25" width="15" height="15" fill="none" stroke="#eab308" stroke-width="2"/><line x1="15" y1="40" x2="10" y2="45" stroke="#f472b6" stroke-width="2"/><path d="M10,45 L5,50 L0,45" stroke="#ea580c" stroke-width="2" fill="none" transform="translate(5,0)"/>`, l); }
+
+        function wrapIcon(id, svgContent, label) {
+            return `
+            <div id="${id}" class="molecule flex flex-col items-center justify-center select-none w-20 h-20 transition-all cursor-grab active:cursor-grabbing">
+                <div class="transform transition-transform scale-100">
+                    ${svgContent}
+                </div>
+                <span class="mt-1 text-[10px] font-bold bg-white/90 px-2 py-0.5 rounded-full text-slate-600 shadow-sm whitespace-nowrap border border-slate-100">${label}</span>
+            </div>`;
+        }
+
+        function createEnzymeBox(id, elemId) {
+            const data = ELEMENTS[elemId];
+            const isPathway = data.category === 'pathways';
+            const extraClass = isPathway ? 'pathway' : '';
+            return `
+            <div id="${id}" class="molecule enzyme-box ${extraClass} select-none w-48 h-40 cursor-grab active:cursor-grabbing">
+                <div class="text-xs font-bold uppercase tracking-widest ${isPathway ? 'text-pink-700' : 'text-slate-500'} mb-2 pointer-events-none text-center px-2">${data.name}</div>
+                <div class="flex flex-wrap justify-center gap-1 w-full px-2 pointer-events-none min-h-[40px]" id="${id}-contents">
+                    <span class="text-[9px] text-slate-400 italic">Drag items here</span>
+                </div>
+                <div class="mt-2 text-[9px] text-slate-400 text-center w-full px-2 leading-tight">
+                    Needs: ${data.requires.map(r=>ELEMENTS[r]?ELEMENTS[r].name:r).join(', ')}
+                </div>
+            </div>`;
+        }
+
+        // --- SPAWN LOGIC (Click to Add) ---
+        function spawnItemFromInventory(elemId) {
+            const uid = 'obj-' + (nextId++);
+            const wb = document.getElementById('workbench');
+            const wbRect = wb.getBoundingClientRect();
+            
+            // Random scatter near center
+            const centerX = wbRect.width / 2;
+            const centerY = wbRect.height / 2;
+            const offsetX = (Math.random() - 0.5) * 100;
+            const offsetY = (Math.random() - 0.5) * 100;
+            
             const newItem = {
                 id: uid,
                 elemId: elemId,
                 type: ELEMENTS[elemId].category === 'molecules' ? 'molecule' : 'enzyme',
-                x: x, y: y,
-                contents: [],
-                chainLength: 2 
+                x: centerX + offsetX - 40, 
+                y: centerY + offsetY - 40, 
+                contents: []
             };
 
             workbenchItems.push(newItem);
-            renderWorkbenchItem(newItem);
 
-            document.getElementById('tutorial-msg').style.display = 'none';
-
-            dragItem = newItem;
-            dragOffsetX = 40;
-            dragOffsetY = 40;
-        }
-
-        function renderWorkbenchItem(item) {
-            const wb = document.getElementById('workbench');
-            const data = ELEMENTS[item.elemId];
-            
             const div = document.createElement('div');
-            const label = data.name;
-            div.innerHTML = item.type === 'enzyme' ? createEnzymeBox(item.id, item.elemId) : data.render(item.id, label);
-            
+            div.innerHTML = newItem.type === 'enzyme' ? createEnzymeBox(uid, elemId) : ELEMENTS[elemId].render(uid, ELEMENTS[elemId].name);
             const el = div.firstElementChild;
-            el.style.left = item.x + 'px';
-            el.style.top = item.y + 'px';
             
+            el.style.position = 'absolute';
+            el.style.left = newItem.x + 'px';
+            el.style.top = newItem.y + 'px';
+            
+            // Pop In Animation
+            el.animate([
+                { transform: 'scale(0) translateY(20px)', opacity: 0 },
+                { transform: 'scale(1) translateY(0)', opacity: 1 }
+            ], { duration: 400, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' });
+
             wb.appendChild(el);
-            if(item.type === 'enzyme') updateEnzymeContents(item);
+            document.getElementById('tutorial-msg').style.display = 'none';
         }
 
-        function handleMouseDown(e) {
+        // --- DRAG AND DROP SYSTEM ---
+        
+        function handleGlobalStart(e) {
             const target = e.target.closest('.molecule');
-            if(!target || !target.id.startsWith('obj-')) return;
+            if(!target || !target.id.startsWith('obj-')) return; 
+            
+            if(e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+
+            const touch = e.touches ? e.touches[0] : e;
+            const clientX = touch.clientX;
+            const clientY = touch.clientY;
+
+            e.preventDefault();
             const item = workbenchItems.find(i => i.id === target.id);
             if(item) {
-                dragItem = item;
-                const rect = target.getBoundingClientRect();
-                dragOffsetX = e.clientX - rect.left;
-                dragOffsetY = e.clientY - rect.top;
-                target.style.zIndex = 100;
+                startDragLogic(item, target, clientX, clientY, 'workbench');
             }
         }
 
-        function handleTouchStart(e) {
-            const touch = e.touches[0];
-            const target = document.elementFromPoint(touch.clientX, touch.clientY);
-            const mol = target ? target.closest('.molecule') : null;
-            if(mol && mol.id.startsWith('obj-')) {
-                e.preventDefault();
-                const item = workbenchItems.find(i => i.id === mol.id);
-                if(item) {
-                    dragItem = item;
-                    const rect = mol.getBoundingClientRect();
-                    dragOffsetX = touch.clientX - rect.left;
-                    dragOffsetY = touch.clientY - rect.top;
-                    mol.style.zIndex = 100;
-                }
+        function startDragLogic(item, element, clientX, clientY, source) {
+            dragState.active = true;
+            dragState.item = item;
+            dragState.source = source;
+            dragState.element = element;
+
+            const rect = element.getBoundingClientRect();
+            const offsetX = clientX - rect.left;
+            const offsetY = clientY - rect.top;
+            
+            dragState.offsetX = offsetX || (element.offsetWidth/2);
+            dragState.offsetY = offsetY || (element.offsetHeight/2);
+
+            // CACHE drop targets so we don't query DOM on every move
+            dragState.dropTargets = [];
+            dragState.trashRect = document.getElementById('trash-bin').getBoundingClientRect();
+            
+            if (item.type === 'molecule') {
+                workbenchItems.forEach(t => {
+                    if(t.type === 'enzyme' && t.id !== item.id) {
+                        const el = document.getElementById(t.id);
+                        if(el) {
+                            const r = el.getBoundingClientRect();
+                            dragState.dropTargets.push({
+                                id: t.id,
+                                elemId: t.elemId,
+                                left: r.left, right: r.right, top: r.top, bottom: r.bottom,
+                                el: el
+                            });
+                        }
+                    }
+                });
             }
-        }
 
-        function handleMouseMove(e) {
-            if(!dragItem) return;
-            e.preventDefault();
-            moveDragItem(e.clientX, e.clientY);
-        }
-
-        function handleTouchMove(e) {
-            if(!dragItem) return;
-            e.preventDefault();
-            const touch = e.touches[0];
-            moveDragItem(touch.clientX, touch.clientY);
-        }
-
-        function moveDragItem(cx, cy) {
-            const wb = document.getElementById('workbench');
-            const rect = wb.getBoundingClientRect();
-            
-            let nx = cx - rect.left - dragOffsetX;
-            let ny = cy - rect.top - dragOffsetY;
-            
-            dragItem.x = nx;
-            dragItem.y = ny;
-            
-            const el = document.getElementById(dragItem.id);
-            if(el) {
-                el.style.left = nx + 'px';
-                el.style.top = ny + 'px';
-                checkHover(dragItem);
+            if (element.parentElement.id !== 'drag-layer') {
+                const layer = document.getElementById('drag-layer');
+                element.style.left = rect.left + 'px';
+                element.style.top = rect.top + 'px';
+                layer.appendChild(element);
             }
+
+            element.classList.add('dragging');
         }
 
-        function handleMouseUp(e) {
-            if(!dragItem) return;
-            const el = document.getElementById(dragItem.id);
-            if(el) el.style.zIndex = 10;
-            handleDrop(dragItem);
-            dragItem = null;
+        function handleGlobalMove(e) {
+            if(!dragState.active) return;
+            e.preventDefault(); 
+
+            const touch = e.touches ? e.touches[0] : e;
+            const x = touch.clientX - dragState.offsetX;
+            const y = touch.clientY - dragState.offsetY;
+
+            dragState.element.style.left = x + 'px';
+            dragState.element.style.top = y + 'px';
+
+            const cx = x + (dragState.element.offsetWidth/2);
+            const cy = y + (dragState.element.offsetHeight/2);
+
+            checkHover(cx, cy);
+            checkTrashHover(cx, cy);
         }
 
-        function checkHover(activeItem) {
-            if(activeItem.type === 'enzyme') return;
+        function checkHover(cx, cy) {
+            if(dragState.item.type !== 'molecule') return;
             
-            const activeEl = document.getElementById(activeItem.id);
-            const r1 = activeEl.getBoundingClientRect();
-            const c1 = { x: r1.left + r1.width/2, y: r1.top + r1.height/2 };
-
-            workbenchItems.forEach(target => {
-                if(target === activeItem) return;
-                if(target.type !== 'enzyme') return;
-
-                const targetEl = document.getElementById(target.id);
-                const r2 = targetEl.getBoundingClientRect();
-
-                if(c1.x > r2.left && c1.x < r2.right && c1.y > r2.top && c1.y < r2.bottom) {
-                    targetEl.style.transform = 'scale(1.05)';
-                    targetEl.style.borderColor = '#f59e0b';
+            // Iterate over CACHED drop targets
+            dragState.dropTargets.forEach(target => {
+                if(cx > target.left && cx < target.right && cy > target.top && cy < target.bottom) {
+                    target.el.style.transform = 'scale(1.05)';
+                    target.el.style.borderColor = '#f59e0b';
                 } else {
-                    targetEl.style.transform = 'scale(1)';
-                    targetEl.style.borderColor = ELEMENTS[target.elemId].category === 'pathways' ? '#be185d' : ELEMENTS[target.elemId].border; 
+                    target.el.style.transform = 'scale(1)';
+                    target.el.style.borderColor = ELEMENTS[target.elemId].category === 'pathways' ? '#be185d' : ELEMENTS[target.elemId].border;
                 }
             });
         }
-
-        function handleDrop(item) {
-            const itemEl = document.getElementById(item.id);
-            const r1 = itemEl.getBoundingClientRect();
-            const c1 = { x: r1.left + r1.width/2, y: r1.top + r1.height/2 };
+        
+        function checkTrashHover(cx, cy) {
+            const trash = document.getElementById('trash-bin');
+            // Use cached rect if available, fallback if needed (though cache is set in startDragLogic)
+            const r = dragState.trashRect || trash.getBoundingClientRect();
             
-            let dropped = false;
+            if(cx > r.left && cx < r.right && cy > r.top && cy < r.bottom) {
+                trash.classList.add('hovered');
+            } else {
+                trash.classList.remove('hovered');
+            }
+        }
 
-            if(item.type === 'molecule') {
-                for(let target of workbenchItems) {
-                    if(target.type === 'enzyme') {
-                        const targetEl = document.getElementById(target.id);
-                        const r2 = targetEl.getBoundingClientRect();
-                        
-                        if(c1.x > r2.left && c1.x < r2.right && c1.y > r2.top && c1.y < r2.bottom) {
-                            
-                            const enzymeData = ELEMENTS[target.elemId];
-                            
-                            let accepted = false;
-                            if (target.elemId === '3hb_dehydrogenase') {
-                                if (item.elemId === 'ketone_body' || item.elemId === '3_hydroxybutyrate') accepted = true;
-                            } else if (target.elemId === 'thiolase') {
-                                if (item.elemId === 'acetyl_coa' || item.elemId === 'acetoacetyl_coa') accepted = true;
-                            } else if (target.elemId === 'acyltransferase') {
-                                // Logic handled in checkReaction but accept basic components
-                                if (item.elemId === 'glycerol' || item.elemId === 'cholesterol' || item.elemId.endsWith('_acid') || 
-                                    item.elemId === 'monoacylglycerol' || item.elemId === 'diacylglycerol') accepted = true;
-                            } else if (target.elemId === 'lipase') {
-                                // Accept esters
-                                if (item.elemId === 'triglyceride' || item.elemId === 'diacylglycerol' || 
-                                    item.elemId === 'monoacylglycerol' || item.elemId === 'cholesteryl_ester') accepted = true;
-                            } else if (target.elemId === 'beta_oxidation') {
-                                const isAcylCoA = item.elemId.startsWith('acyl_coa');
-                                if (isAcylCoA && item.elemId !== 'acetyl_coa' && item.elemId !== 'acyl_coa_3') accepted = true;
-                            } else if (target.elemId === 'acyl_synthetase' || target.elemId === 'fas') {
-                                accepted = true; 
-                            } else if (target.elemId === 'coa_transferase') {
-                                if (item.elemId === 'succinyl_coa' || item.elemId === 'ketone_body') accepted = true;
-                            } else if (target.elemId === 'pyruvate_dehydrogenase') {
-                                if (item.elemId === 'pyruvate') accepted = true;
-                            } else if (target.elemId === 'citrate_synthase') {
-                                if (item.elemId === 'acetyl_coa' || item.elemId === 'oaa') accepted = true;
-                            } else if (target.elemId === 'citrate_lyase') {
-                                if (item.elemId === 'citrate') accepted = true;
-                            } else if (target.elemId === 'pyruvate_carboxylase') {
-                                if (item.elemId === 'pyruvate') accepted = true;
-                            } else if (target.elemId === 'malate_dehydrogenase') {
-                                if (item.elemId === 'malate' || item.elemId === 'nad' || item.elemId === 'oaa' || item.elemId === 'nadh') accepted = true;
-                            } else if (target.elemId === 'malic_enzyme') {
-                                if (item.elemId === 'malate') accepted = true;
-                            } else if (target.elemId === 'glycolysis') {
-                                if (item.elemId === 'glucose') accepted = true;
-                            } else if (target.elemId === 'etc') {
-                                if (item.elemId === 'nadh' || item.elemId === 'fadh2') accepted = true;
-                            } else {
-                                if (enzymeData.requires.includes(item.elemId)) accepted = true;
-                            }
-                            
-                            if(accepted) {
-                                acceptDrop(target, item);
-                                dropped = true;
-                            } else {
-                                rejectDrop(targetEl);
+        function handleGlobalEnd(e) {
+            if(!dragState.active) return;
+            
+            const el = dragState.element;
+            const item = dragState.item;
+            const wb = document.getElementById('workbench');
+            const wbRect = wb.getBoundingClientRect();
+            const trash = document.getElementById('trash-bin');
+            
+            // Re-calculate rects one last time for drop precision
+            const rect = el.getBoundingClientRect();
+            const cx = rect.left + rect.width/2;
+            const cy = rect.top + rect.height/2;
+
+            const trashRect = dragState.trashRect; // Use cached
+
+            // 1. Check Trash
+            if(cx > trashRect.left && cx < trashRect.right && cy > trashRect.top && cy < trashRect.bottom) {
+                el.remove();
+                const idx = workbenchItems.findIndex(i => i.id === item.id);
+                if(idx > -1) workbenchItems.splice(idx, 1);
+                trash.classList.remove('hovered');
+                
+                trash.animate([
+                    { transform: 'scale(1)' },
+                    { transform: 'scale(1.2)' },
+                    { transform: 'scale(1)' }
+                ], { duration: 200 });
+                
+                dragState.active = false;
+                dragState.element = null;
+                dragState.item = null;
+                return;
+            }
+
+            const insideWB = cx > wbRect.left && cx < wbRect.right && cy > wbRect.top && cy < wbRect.bottom;
+
+            if(insideWB) {
+                let consumed = false;
+                if(item.type === 'molecule') {
+                    // Use cached targets for drop detection too
+                    for(let target of dragState.dropTargets) {
+                        if(cx > target.left && cx < target.right && cy > target.top && cy < target.bottom) {
+                            // Find original item data
+                            const realTarget = workbenchItems.find(i => i.id === target.id);
+                            if(realTarget) {
+                                if(checkAccept(realTarget, item)) {
+                                    acceptDrop(realTarget, item);
+                                    consumed = true;
+                                } else {
+                                    rejectDrop(target.el);
+                                }
                             }
                             break;
                         }
                     }
                 }
-            }
 
-            if(!dropped) {
-                const sidebar = document.querySelector('aside').getBoundingClientRect();
-                if(c1.x < sidebar.right) {
+                if(!consumed) {
+                    item.x = rect.left - wbRect.left;
+                    item.y = rect.top - wbRect.top;
+
+                    // Bounds Check
+                    if (item.x < 0) item.x = 0;
+                    if (item.y < 0) item.y = 0;
+                    if (item.x > wbRect.width - 50) item.x = wbRect.width - 50;
+                    if (item.y > wbRect.height - 50) item.y = wbRect.height - 50;
+
+                    el.classList.remove('dragging');
+                    el.style.position = 'absolute';
+                    el.style.left = item.x + 'px';
+                    el.style.top = item.y + 'px';
+                    el.style.zIndex = '';
+                    wb.appendChild(el);
+                } else {
+                    el.remove();
                     const idx = workbenchItems.findIndex(i => i.id === item.id);
                     if(idx > -1) workbenchItems.splice(idx, 1);
-                    itemEl.remove();
                 }
+            } else {
+                el.remove();
+                const idx = workbenchItems.findIndex(i => i.id === item.id);
+                if(idx > -1) workbenchItems.splice(idx, 1);
             }
+
+            // Cleanup
+            dragState.active = false;
+            dragState.element = null;
+            dragState.item = null;
+            dragState.dropTargets = [];
         }
-        
+
+        // --- GAME LOGIC ---
+
+        function checkAccept(target, item) {
+            const eid = target.elemId;
+            const iid = item.elemId;
+            const enzymeData = ELEMENTS[eid];
+
+            if (eid === '3hb_dehydrogenase') {
+                return iid === 'ketone_body' || iid === '3_hydroxybutyrate';
+            } else if (eid === 'thiolase') {
+                return iid === 'acetyl_coa' || iid === 'acetoacetyl_coa';
+            } else if (eid === 'acyltransferase') {
+                return iid === 'glycerol' || iid === 'cholesterol' || iid.endsWith('_acid') || iid === 'fatty_acid' || 
+                       iid === 'monoacylglycerol' || iid === 'diacylglycerol';
+            } else if (eid === 'lipase') {
+                return iid === 'triglyceride' || iid === 'diacylglycerol' || 
+                       iid === 'monoacylglycerol' || iid === 'cholesteryl_ester';
+            } else if (eid === 'beta_oxidation') {
+                return iid.startsWith('acyl_coa') && iid !== 'acetyl_coa' && iid !== 'acyl_coa_3';
+            } else if (eid === 'acyl_synthetase' || eid === 'fas') {
+                return true; 
+            } else if (eid === 'coa_transferase') {
+                return iid === 'succinyl_coa' || iid === 'ketone_body';
+            } else if (eid === 'pyruvate_dehydrogenase') {
+                return iid === 'pyruvate';
+            } else if (eid === 'citrate_synthase') {
+                return iid === 'acetyl_coa' || iid === 'oaa';
+            } else if (eid === 'citrate_lyase') {
+                return iid === 'citrate';
+            } else if (eid === 'pyruvate_carboxylase') {
+                return iid === 'pyruvate';
+            } else if (eid === 'malate_dehydrogenase') {
+                return iid === 'malate' || iid === 'nad' || iid === 'oaa' || iid === 'nadh';
+            } else if (eid === 'malic_enzyme') {
+                return iid === 'malate';
+            } else if (eid === 'glycolysis') {
+                return iid === 'glucose';
+            } else if (eid === 'etc') {
+                return iid === 'nadh' || iid === 'fadh2';
+            } else if (eid === 'spontaneous_pathway') {
+                return iid === 'ketone_body';
+            }
+            return enzymeData.requires.includes(iid);
+        }
+
         function acceptDrop(target, item) {
             target.contents.push(item.elemId);
-            const idx = workbenchItems.findIndex(i => i.id === item.id);
-            if(idx > -1) workbenchItems.splice(idx, 1);
-            const itemEl = document.getElementById(item.id);
-            itemEl.remove();
-
             updateEnzymeContents(target);
             document.getElementById(target.id).style.transform = 'scale(1)';
             checkReaction(target);
         }
-        
-        function rejectDrop(targetEl) {
-            targetEl.classList.add('reject');
-            setTimeout(() => targetEl.classList.remove('reject'), 400);
+
+        function rejectDrop(el) {
+            el.classList.add('reject');
+            setTimeout(() => el.classList.remove('reject'), 400);
         }
 
         function updateEnzymeContents(item) {
             const container = document.getElementById(item.id + '-contents');
             if(!container) return;
-            
             if(item.contents.length === 0) {
-                container.innerHTML = `<span class="text-[10px] text-slate-400 italic">Drag ingredients here</span>`;
+                container.innerHTML = `<span class="text-[9px] text-slate-400 italic">Drag items here</span>`;
             } else {
                 container.innerHTML = item.contents.map(cid => {
                     const d = ELEMENTS[cid];
-                    return `<div class="w-6 h-6 rounded-full border bg-white flex items-center justify-center text-[7px]" title="${d.name}">${d.name.substring(0,2)}</div>`;
+                    return `<div class="w-5 h-5 rounded-full border bg-white flex items-center justify-center text-[7px]" title="${d.name}">${d.name.substring(0,2)}</div>`;
                 }).join('');
             }
         }
 
         function checkReaction(item) {
-            const data = ELEMENTS[item.elemId];
-            
-            if (item.elemId === 'acyl_synthetase') {
-                handleSynthetase(item);
-                return;
-            }
-            if (item.elemId === 'beta_oxidation') {
-                handleBetaOxidation(item);
-                return;
-            }
-            if (item.elemId === 'thiolase') {
-                handleThiolase(item);
-                return;
-            }
-            if(item.elemId === 'fas') {
-                handleFASLogic(item, data);
-                return;
-            }
-            if (item.elemId === '3hb_dehydrogenase') {
-                handle3HBDehydrogenase(item);
-                return;
-            }
-            if (item.elemId === 'acyltransferase') {
-                handleAcyltransferase(item);
-                return;
-            }
-            if (item.elemId === 'lipase') {
-                handleLipase(item);
-                return;
-            }
-            if (item.elemId === 'coa_transferase') {
-                handleCoATransferase(item);
-                return;
-            }
-            if (item.elemId === 'malate_dehydrogenase') {
-                handleMalateDehydrogenase(item);
-                return;
-            }
-            if (item.elemId === 'etc') {
-                handleETC(item);
-                return;
-            }
-            // New: Pyruvate Dehydrogenase
-            if (item.elemId === 'pyruvate_dehydrogenase') {
-                handlePDH(item);
-                return;
-            }
+            const eid = item.elemId;
+            const data = ELEMENTS[eid];
+
+            // Re-using the complex logic handlers from your uploaded file
+            if (eid === 'acyl_synthetase') { handleSynthetase(item); return; }
+            if (eid === 'beta_oxidation') { handleBetaOxidation(item); return; }
+            if (eid === 'thiolase') { handleThiolase(item); return; }
+            if (eid === 'fas') { handleFASLogic(item, data); return; }
+            if (eid === '3hb_dehydrogenase') { handle3HBDehydrogenase(item); return; }
+            if (eid === 'acyltransferase') { handleAcyltransferase(item); return; }
+            if (eid === 'lipase') { handleLipase(item); return; }
+            if (eid === 'coa_transferase') { handleCoATransferase(item); return; }
+            if (eid === 'malate_dehydrogenase') { handleMalateDehydrogenase(item); return; }
+            if (eid === 'etc') { handleETC(item); return; }
+            if (eid === 'pyruvate_dehydrogenase') { handlePDH(item); return; }
 
             // Standard Logic
+            const run = (products) => {
+                const el = document.getElementById(item.id);
+                el.classList.add('active-reaction');
+                setTimeout(() => {
+                    item.contents = [];
+                    updateEnzymeContents(item);
+                    products.forEach(p => spawnProduct(item, p));
+                    el.classList.remove('active-reaction');
+                }, 800);
+            };
+
             const reqs = [...data.requires];
             const current = [...item.contents];
             let hasAll = true;
@@ -1265,448 +888,288 @@
             }
 
             if(hasAll && current.length === 0) {
-                triggerReaction(item, data.produces);
+                run(data.produces);
             }
         }
 
-        // New Handler for PDH to include CO2
+        // --- REACTION HANDLERS ---
+        function spawnProduct(originItem, elemId) {
+            const uid = 'obj-' + (nextId++);
+            const offsetX = (Math.random()*60 - 30);
+            const offsetY = 80 + (Math.random()*20);
+            
+            const newItem = {
+                id: uid, elemId: elemId, type: 'molecule',
+                x: originItem.x + 100 + offsetX - 30,
+                y: originItem.y + 100 + offsetY,
+                contents: []
+            };
+            
+            // Boundary checks
+            const wb = document.getElementById('workbench');
+            const rect = wb.getBoundingClientRect();
+            if(newItem.x > rect.width - 50) newItem.x = rect.width - 80;
+            if(newItem.y > rect.height - 50) newItem.y = rect.height - 80;
+
+            workbenchItems.push(newItem);
+            
+            const div = document.createElement('div');
+            div.innerHTML = ELEMENTS[elemId].render(newItem.id, ELEMENTS[elemId].name);
+            const el = div.firstElementChild;
+            el.style.position = 'absolute';
+            el.style.left = newItem.x + 'px';
+            el.style.top = newItem.y + 'px';
+            
+            el.animate([
+                { transform: 'scale(0) translateY(20px)', opacity: 0 },
+                { transform: 'scale(1) translateY(0)', opacity: 1 }
+            ], { duration: 400 });
+            
+            wb.appendChild(el);
+        }
+
         function handlePDH(item) {
-            const contents = item.contents;
-            if (contents.includes('pyruvate')) {
-                item.contents = [];
-                updateEnzymeContents(item);
+            if (item.contents.includes('pyruvate')) {
                 const el = document.getElementById(item.id);
                 el.classList.add('active-reaction');
                 setTimeout(() => {
-                    spawnProduct(item, 'acetyl_coa');
-                    spawnProduct(item, 'nadh');
-                    spawnProduct(item, 'co2'); // Added CO2
+                    item.contents = []; updateEnzymeContents(item);
+                    spawnProduct(item, 'acetyl_coa'); spawnProduct(item, 'nadh'); spawnProduct(item, 'co2');
                     el.classList.remove('active-reaction');
                 }, 800);
             }
         }
-        
-        function handleETC(item) {
-            const contents = item.contents;
-            if (contents.includes('nadh')) {
-                item.contents = [];
-                updateEnzymeContents(item);
-                const el = document.getElementById(item.id);
-                el.classList.add('active-reaction');
-                setTimeout(() => {
-                    el.classList.remove('active-reaction');
-                    spawnProduct(item, 'atp');
-                    spawnProduct(item, 'atp');
-                    spawnProduct(item, 'atp');
-                }, 800);
-            }
-            else if (contents.includes('fadh2')) {
-                item.contents = [];
-                updateEnzymeContents(item);
-                const el = document.getElementById(item.id);
-                el.classList.add('active-reaction');
-                setTimeout(() => {
-                    el.classList.remove('active-reaction');
-                    spawnProduct(item, 'atp');
-                    spawnProduct(item, 'atp');
-                }, 800);
-            }
-        }
-        
-        function handleMalateDehydrogenase(item) {
-             const contents = item.contents;
-             const hasMalate = contents.includes('malate');
-             const hasNAD = contents.includes('nad');
-             const hasOAA = contents.includes('oaa');
-             const hasNADH = contents.includes('nadh');
 
-             if (hasMalate && hasNAD) {
-                item.contents = [];
-                updateEnzymeContents(item);
-                const el = document.getElementById(item.id);
-                el.classList.add('active-reaction');
-                setTimeout(() => {
-                    el.classList.remove('active-reaction');
-                    spawnProduct(item, 'oaa');
-                    spawnProduct(item, 'nadh');
-                }, 800);
-             } else if (hasOAA && hasNADH) {
-                item.contents = [];
-                updateEnzymeContents(item);
-                const el = document.getElementById(item.id);
-                el.classList.add('active-reaction');
-                setTimeout(() => {
-                    el.classList.remove('active-reaction');
-                    spawnProduct(item, 'malate');
-                    spawnProduct(item, 'nad');
-                }, 800);
+        function handleETC(item) {
+            if (item.contents.includes('nadh')) {
+                const el = document.getElementById(item.id); el.classList.add('active-reaction');
+                setTimeout(() => { item.contents=[]; updateEnzymeContents(item); spawnProduct(item,'atp'); spawnProduct(item,'atp'); spawnProduct(item,'atp'); el.classList.remove('active-reaction'); }, 800);
+            } else if (item.contents.includes('fadh2')) {
+                const el = document.getElementById(item.id); el.classList.add('active-reaction');
+                setTimeout(() => { item.contents=[]; updateEnzymeContents(item); spawnProduct(item,'atp'); spawnProduct(item,'atp'); el.classList.remove('active-reaction'); }, 800);
+            }
+        }
+
+        function handleMalateDehydrogenase(item) {
+             const c = item.contents;
+             if (c.includes('malate') && c.includes('nad')) {
+                const el = document.getElementById(item.id); el.classList.add('active-reaction');
+                setTimeout(() => { item.contents=[]; updateEnzymeContents(item); spawnProduct(item,'oaa'); spawnProduct(item,'nadh'); el.classList.remove('active-reaction'); }, 800);
+             } else if (c.includes('oaa') && c.includes('nadh')) {
+                const el = document.getElementById(item.id); el.classList.add('active-reaction');
+                setTimeout(() => { item.contents=[]; updateEnzymeContents(item); spawnProduct(item,'malate'); spawnProduct(item,'nad'); el.classList.remove('active-reaction'); }, 800);
              }
         }
 
         function handleCoATransferase(item) {
-            const contents = item.contents;
-            if (contents.includes('succinyl_coa') && contents.includes('ketone_body')) {
-                item.contents = [];
-                updateEnzymeContents(item);
-                const el = document.getElementById(item.id);
-                el.classList.add('active-reaction');
-                setTimeout(() => {
-                    el.classList.remove('active-reaction');
-                    spawnProduct(item, 'succinate');
-                    spawnProduct(item, 'acetoacetyl_coa');
-                }, 800);
+            if (item.contents.includes('succinyl_coa') && item.contents.includes('ketone_body')) {
+                const el = document.getElementById(item.id); el.classList.add('active-reaction');
+                setTimeout(() => { item.contents=[]; updateEnzymeContents(item); spawnProduct(item,'succinate'); spawnProduct(item,'acetoacetyl_coa'); el.classList.remove('active-reaction'); }, 800);
             }
         }
-        
+
         function handleLipase(item) {
-            const contents = item.contents;
-            let output = null;
+            const c = item.contents;
+            let out = null;
+            if(c.includes('triglyceride')) out = ['glycerol', 'fatty_acid', 'fatty_acid', 'fatty_acid'];
+            else if(c.includes('diacylglycerol')) out = ['glycerol', 'fatty_acid', 'fatty_acid'];
+            else if(c.includes('monoacylglycerol')) out = ['glycerol', 'fatty_acid'];
+            else if(c.includes('cholesteryl_ester')) out = ['cholesterol', 'fatty_acid'];
             
-            // Triglyceride -> Glycerol + 3 FA (Generic)
-            if(contents.includes('triglyceride')) {
-                output = ['glycerol', 'fatty_acid', 'fatty_acid', 'fatty_acid'];
+            if(out) {
+                const el = document.getElementById(item.id); el.classList.add('active-reaction');
+                setTimeout(() => { item.contents=[]; updateEnzymeContents(item); out.forEach(p=>spawnProduct(item,p)); el.classList.remove('active-reaction'); }, 800);
             }
-            // DAG -> Glycerol + 2 FA
-            else if(contents.includes('diacylglycerol')) {
-                output = ['glycerol', 'fatty_acid', 'fatty_acid'];
-            }
-            // MAG -> Glycerol + 1 FA
-            else if(contents.includes('monoacylglycerol')) {
-                output = ['glycerol', 'fatty_acid'];
-            }
-            // CE -> Cholesterol + 1 FA
-            else if(contents.includes('cholesteryl_ester')) {
-                output = ['cholesterol', 'fatty_acid'];
-            }
+        }
+
+        // Updated Acyltransferase Logic
+        function handleAcyltransferase(item) {
+            const c = item.contents;
+            const faList = c.filter(k => k.endsWith('_acid') || k === 'fatty_acid');
+            const faCount = faList.length;
             
-            if(output) {
-                item.contents = [];
+            if (faCount === 0) return; // No fatty acids to react with
+
+            let product = null;
+            let consumedFA = 0;
+
+            // 1. Cholesterol Logic
+            if (c.includes('cholesterol') && faCount >= 1) {
+                product = 'cholesteryl_ester';
+                consumedFA = 1;
+                // remove 1 cholesterol
+                const idx = item.contents.indexOf('cholesterol');
+                if (idx > -1) item.contents.splice(idx, 1);
+            }
+            // 2. Glycerol Logic
+            else if (c.includes('glycerol')) {
+                const idx = item.contents.indexOf('glycerol');
+                if (idx > -1) item.contents.splice(idx, 1);
+
+                if (faCount >= 3) {
+                    product = 'triglyceride';
+                    consumedFA = 3;
+                } else if (faCount === 2) {
+                    product = 'diacylglycerol';
+                    consumedFA = 2;
+                } else {
+                    product = 'monoacylglycerol';
+                    consumedFA = 1;
+                }
+            }
+            // 3. MAG Logic
+            else if (c.includes('monoacylglycerol')) {
+                const idx = item.contents.indexOf('monoacylglycerol');
+                if (idx > -1) item.contents.splice(idx, 1);
+
+                if (faCount >= 2) {
+                    product = 'triglyceride';
+                    consumedFA = 2;
+                } else {
+                    product = 'diacylglycerol';
+                    consumedFA = 1;
+                }
+            }
+            // 4. DAG Logic
+            else if (c.includes('diacylglycerol')) {
+                const idx = item.contents.indexOf('diacylglycerol');
+                if (idx > -1) item.contents.splice(idx, 1);
+
+                product = 'triglyceride';
+                consumedFA = 1;
+            }
+
+            if (product) {
+                // Remove consumed FAs
+                for(let i=0; i<consumedFA; i++) {
+                    // Find an FA in contents and remove it
+                    const faIndex = item.contents.findIndex(k => k.endsWith('_acid') || k === 'fatty_acid');
+                    if(faIndex > -1) item.contents.splice(faIndex, 1);
+                }
+
+                // Identify extra FAs to release back (those remaining in contents)
+                const extraFAs = item.contents.filter(k => k.endsWith('_acid') || k === 'fatty_acid');
+                
+                // Clear contents for reaction (logic has already removed consumed items, but we want clean slate visual reset)
+                item.contents = []; 
                 updateEnzymeContents(item);
-                const el = document.getElementById(item.id);
+
+                const el = document.getElementById(item.id); 
                 el.classList.add('active-reaction');
-                setTimeout(() => {
-                    el.classList.remove('active-reaction');
-                    output.forEach(p => spawnProduct(item, p));
+                
+                setTimeout(() => { 
+                    spawnProduct(item, product);
+                    // Return any extra fatty acids
+                    extraFAs.forEach(fa => spawnProduct(item, fa));
+                    el.classList.remove('active-reaction'); 
                 }, 800);
             }
-        }
-        
-        function handleAcyltransferase(item) {
-            const contents = item.contents;
-            // Check for fatty acid (generic or specific)
-            // Simplify: Any _acid implies fatty acid
-            const hasFA = contents.find(c => c.endsWith('_acid') || c === 'fatty_acid');
-            
-            if(!hasFA) return;
-            
-            // Cholesterol + FA -> Cholesteryl Ester
-            if(contents.includes('cholesterol')) {
-                reactAndProduce(item, 'cholesteryl_ester');
-                return;
-            }
-            
-            // Glycerol + FA -> MAG
-            if(contents.includes('glycerol')) {
-                reactAndProduce(item, 'monoacylglycerol');
-                return;
-            }
-            
-            // MAG + FA -> DAG
-            if(contents.includes('monoacylglycerol')) {
-                reactAndProduce(item, 'diacylglycerol');
-                return;
-            }
-            
-            // DAG + FA -> TAG
-            if(contents.includes('diacylglycerol')) {
-                reactAndProduce(item, 'triglyceride');
-                return;
-            }
-        }
-        
-        function reactAndProduce(item, product) {
-            item.contents = [];
-            updateEnzymeContents(item);
-            const el = document.getElementById(item.id);
-            el.classList.add('active-reaction');
-            setTimeout(() => {
-                el.classList.remove('active-reaction');
-                spawnProduct(item, product);
-            }, 800);
         }
 
         function handleThiolase(item) {
-            const contents = item.contents;
-            
-            const acetylCount = contents.filter(c => c === 'acetyl_coa').length;
-            if (acetylCount >= 2) {
-                const idx1 = item.contents.indexOf('acetyl_coa'); item.contents.splice(idx1, 1);
-                const idx2 = item.contents.indexOf('acetyl_coa'); item.contents.splice(idx2, 1);
-                updateEnzymeContents(item);
-                const el = document.getElementById(item.id);
-                el.classList.add('active-reaction');
-                setTimeout(() => {
-                    el.classList.remove('active-reaction');
-                    spawnProduct(item, 'acetoacetyl_coa');
+            const ac = item.contents.filter(x => x === 'acetyl_coa').length;
+            if (ac >= 2) {
+                const el = document.getElementById(item.id); el.classList.add('active-reaction');
+                setTimeout(() => { 
+                    item.contents.splice(item.contents.indexOf('acetyl_coa'),1); item.contents.splice(item.contents.indexOf('acetyl_coa'),1);
+                    updateEnzymeContents(item); spawnProduct(item,'acetoacetyl_coa'); el.classList.remove('active-reaction'); 
                 }, 800);
                 return;
             }
-
-            if (contents.includes('acetoacetyl_coa')) {
-                 item.contents = [];
-                 updateEnzymeContents(item);
-                 const el = document.getElementById(item.id);
-                 el.classList.add('active-reaction');
-                 setTimeout(() => {
-                     el.classList.remove('active-reaction');
-                     spawnProduct(item, 'acetyl_coa');
-                     spawnProduct(item, 'acetyl_coa');
-                 }, 800);
+            if (item.contents.includes('acetoacetyl_coa')) {
+                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
+                 setTimeout(() => { item.contents=[]; updateEnzymeContents(item); spawnProduct(item,'acetyl_coa'); spawnProduct(item,'acetyl_coa'); el.classList.remove('active-reaction'); }, 800);
             }
         }
 
         function handleSynthetase(item) {
-            const contents = item.contents;
-            const hasATP = contents.includes('atp');
-            
-            const faMap = {
-                'stearic_acid': 'acyl_coa_18',
-                'palmitic_acid': 'acyl_coa_16',
-                'myristic_acid': 'acyl_coa_14',
-                'lauric_acid': 'acyl_coa_12',
-                'capric_acid': 'acyl_coa_10',
-                'caprylic_acid': 'acyl_coa_8',
-                'caproic_acid': 'acyl_coa_6',
-                'butyric_acid': 'acyl_coa_4',
-                'pentadecanoic_acid': 'acyl_coa_15',
-                'tridecanoic_acid': 'acyl_coa_13',
-                'undecanoic_acid': 'acyl_coa_11',
-                'nonanoic_acid': 'acyl_coa_9',
-                'heptanoic_acid': 'acyl_coa_7',
-                'valeric_acid': 'acyl_coa_5',
-                'propionic_acid': 'acyl_coa_3',
-                'fatty_acid': 'acyl_coa'
-            };
-            
-            const fa = contents.find(c => faMap[c]);
-
-            if (hasATP && fa) {
-                item.contents = []; // Consume
-                updateEnzymeContents(item);
-                const el = document.getElementById(item.id);
-                el.classList.add('active-reaction');
-                setTimeout(() => {
-                    el.classList.remove('active-reaction');
-                    spawnProduct(item, faMap[fa]);
-                    spawnProduct(item, 'amp');
-                }, 800);
+            const c = item.contents;
+            if (!c.includes('atp')) return;
+            const faMap = { 'stearic_acid':'acyl_coa_18', 'palmitic_acid':'acyl_coa_16', 'myristic_acid':'acyl_coa_14', 'lauric_acid':'acyl_coa_12', 'capric_acid':'acyl_coa_10', 'caprylic_acid':'acyl_coa_8', 'caproic_acid':'acyl_coa_6', 'butyric_acid':'acyl_coa_4', 'pentadecanoic_acid':'acyl_coa_15', 'tridecanoic_acid':'acyl_coa_13', 'undecanoic_acid':'acyl_coa_11', 'nonanoic_acid':'acyl_coa_9', 'heptanoic_acid':'acyl_coa_7', 'valeric_acid':'acyl_coa_5', 'propionic_acid':'acyl_coa_3', 'fatty_acid':'acyl_coa' };
+            const fa = c.find(k => faMap[k]);
+            if (fa) {
+                const el = document.getElementById(item.id); el.classList.add('active-reaction');
+                setTimeout(() => { item.contents=[]; updateEnzymeContents(item); spawnProduct(item, faMap[fa]); spawnProduct(item, 'amp'); el.classList.remove('active-reaction'); }, 800);
             }
         }
 
         function handleBetaOxidation(item) {
-            const contents = item.contents;
-            const acylTypes = Object.keys(ELEMENTS).filter(k => k.startsWith('acyl_coa'));
-            const currentAcyl = contents.find(c => acylTypes.includes(c));
-
-            // Reject Acetyl-CoA from input
-            if(currentAcyl === 'acetyl_coa') {
-                 item.contents = item.contents.filter(c => c !== 'acetyl_coa');
-                 updateEnzymeContents(item);
-                 rejectDrop(document.getElementById(item.id));
-                 return;
+            const c = item.contents;
+            const acyls = Object.keys(ELEMENTS).filter(k=>k.startsWith('acyl_coa'));
+            const curr = c.find(k=>acyls.includes(k));
+            if(!curr || curr === 'acetyl_coa' || curr === 'acyl_coa_3') {
+                if(curr) rejectDrop(document.getElementById(item.id));
+                return;
             }
-            // Reject Propanoyl-CoA from input for standard beta-oxidation
-            if(currentAcyl === 'acyl_coa_3') {
-                 item.contents = item.contents.filter(c => c !== 'acyl_coa_3');
-                 updateEnzymeContents(item);
-                 rejectDrop(document.getElementById(item.id));
-                 return;
-            }
-
-            if (currentAcyl) {
-                item.contents = [];
-                updateEnzymeContents(item);
-                const el = document.getElementById(item.id);
-                el.classList.add('active-reaction');
+            const el = document.getElementById(item.id); el.classList.add('active-reaction');
+            setTimeout(() => {
+                item.contents=[]; updateEnzymeContents(item);
+                spawnProduct(item, 'acetyl_coa'); spawnProduct(item, 'nadh'); spawnProduct(item, 'fadh2');
                 
-                setTimeout(() => {
-                    
-                    // Products
-                    spawnProduct(item, 'acetyl_coa');
-                    spawnProduct(item, 'nadh');
-                    spawnProduct(item, 'fadh2');
-                    
-                    let nextAcyl = null;
-                    // Even Chains
-                    if (currentAcyl === 'acyl_coa_18') nextAcyl = 'acyl_coa_16';
-                    else if (currentAcyl === 'acyl_coa_16') nextAcyl = 'acyl_coa_14';
-                    else if (currentAcyl === 'acyl_coa_14') nextAcyl = 'acyl_coa_12';
-                    else if (currentAcyl === 'acyl_coa_12') nextAcyl = 'acyl_coa_10';
-                    else if (currentAcyl === 'acyl_coa_10') nextAcyl = 'acyl_coa_8';
-                    else if (currentAcyl === 'acyl_coa_8') nextAcyl = 'acyl_coa_6';
-                    else if (currentAcyl === 'acyl_coa_6') nextAcyl = 'acyl_coa_4';
-                    else if (currentAcyl === 'acyl_coa_4') nextAcyl = 'acetyl_coa'; // Ends in 2 acetyls total
-                    
-                    // Odd Chains
-                    else if (currentAcyl === 'acyl_coa_15') nextAcyl = 'acyl_coa_13';
-                    else if (currentAcyl === 'acyl_coa_13') nextAcyl = 'acyl_coa_11';
-                    else if (currentAcyl === 'acyl_coa_11') nextAcyl = 'acyl_coa_9';
-                    else if (currentAcyl === 'acyl_coa_9') nextAcyl = 'acyl_coa_7';
-                    else if (currentAcyl === 'acyl_coa_7') nextAcyl = 'acyl_coa_5';
-                    else if (currentAcyl === 'acyl_coa_5') nextAcyl = 'acyl_coa_3'; // Ends in Acetyl + Propionyl
-                    else if (currentAcyl === 'acyl_coa_3') {} // Stop, or enter specific path
-                    
-                    // Generic
-                    else if (currentAcyl === 'acyl_coa') nextAcyl = 'acyl_coa'; 
-
-                    if (nextAcyl) spawnProduct(item, nextAcyl);
-
-                    el.classList.remove('active-reaction');
-                }, 800);
-            }
+                let next = null;
+                if(curr === 'acyl_coa_18') next='acyl_coa_16'; else if(curr === 'acyl_coa_16') next='acyl_coa_14';
+                else if(curr === 'acyl_coa_14') next='acyl_coa_12'; else if(curr === 'acyl_coa_12') next='acyl_coa_10';
+                else if(curr === 'acyl_coa_10') next='acyl_coa_8'; else if(curr === 'acyl_coa_8') next='acyl_coa_6';
+                else if(curr === 'acyl_coa_6') next='acyl_coa_4'; else if(curr === 'acyl_coa_4') next='acetyl_coa';
+                else if(curr === 'acyl_coa_15') next='acyl_coa_13'; else if(curr === 'acyl_coa_13') next='acyl_coa_11';
+                else if(curr === 'acyl_coa_11') next='acyl_coa_9'; else if(curr === 'acyl_coa_9') next='acyl_coa_7';
+                else if(curr === 'acyl_coa_7') next='acyl_coa_5'; else if(curr === 'acyl_coa_5') next='acyl_coa_3';
+                else if(curr === 'acyl_coa') next='acyl_coa';
+                
+                if(next) spawnProduct(item, next);
+                el.classList.remove('active-reaction');
+            }, 800);
         }
-        
+
         function handle3HBDehydrogenase(item) {
-            const contents = item.contents;
-            if (contents.includes('ketone_body')) {
-                item.contents = [];
-                updateEnzymeContents(item);
-                const el = document.getElementById(item.id);
-                el.classList.add('active-reaction');
-                setTimeout(() => {
-                    spawnProduct(item, '3_hydroxybutyrate');
-                    el.classList.remove('active-reaction');
-                }, 800);
-            }
-            else if (contents.includes('3_hydroxybutyrate')) {
-                item.contents = [];
-                updateEnzymeContents(item);
-                const el = document.getElementById(item.id);
-                el.classList.add('active-reaction');
-                setTimeout(() => {
-                    spawnProduct(item, 'ketone_body');
-                    el.classList.remove('active-reaction');
-                }, 800);
+            if (item.contents.includes('ketone_body')) {
+                const el = document.getElementById(item.id); el.classList.add('active-reaction');
+                setTimeout(() => { item.contents=[]; updateEnzymeContents(item); spawnProduct(item,'3_hydroxybutyrate'); el.classList.remove('active-reaction'); }, 800);
+            } else if (item.contents.includes('3_hydroxybutyrate')) {
+                const el = document.getElementById(item.id); el.classList.add('active-reaction');
+                setTimeout(() => { item.contents=[]; updateEnzymeContents(item); spawnProduct(item,'ketone_body'); el.classList.remove('active-reaction'); }, 800);
             }
         }
 
         function handleFASLogic(item, data) {
-            const contents = item.contents;
-            const hasMalonyl = contents.includes('malonyl_coa');
-            const hasNADPH = contents.includes('nadph');
+            const c = item.contents;
+            const hasMalonyl = c.includes('malonyl_coa');
+            const hasNADPH = c.includes('nadph');
             
-            // Identify starter
             let starter = null;
+            if(c.includes('acetyl_coa')) starter = 'acetyl_coa';
+            if(!starter && c.includes('acyl_coa_3')) starter = 'acyl_coa_3';
+            if(!starter) starter = c.find(k => k.endsWith('_acid'));
             
-            // 1. Acetyl-CoA (Starter)
-            if(contents.includes('acetyl_coa')) starter = 'acetyl_coa';
-            // Also accept Propionyl-CoA as a starter for odd chains
-            if(!starter && contents.includes('acyl_coa_3')) starter = 'acyl_coa_3'; // Propionyl-CoA
-            
-            // Or accept fatty acids as intermediate
-            if(!starter) {
-                starter = contents.find(c => c.endsWith('_acid'));
-            }
-
-            // Reject logic: Activated fatty acids other than acetyl/malonyl/propionyl
-            // Loop through contents. If we find an acyl_coa that is NOT 3 or acetyl/malonyl, reject.
-            const invalidAcyl = contents.find(c => c.startsWith('acyl_coa_') && c !== 'acyl_coa_3');
-            if(invalidAcyl) {
-                rejectDrop(document.getElementById(item.id));
-                item.contents = [];
-                updateEnzymeContents(item);
-                // Return items
-                contents.forEach(c => spawnProduct(item, c));
-                return;
-            }
-            // Check Stearic Acid rejection
-            if (starter === 'stearic_acid') {
-                rejectDrop(document.getElementById(item.id));
-                item.contents = [];
-                updateEnzymeContents(item);
-                contents.forEach(c => spawnProduct(item, c));
-                return;
+            const invalid = c.find(k => k.startsWith('acyl_coa_') && k !== 'acyl_coa_3');
+            if(invalid || starter === 'stearic_acid') {
+                rejectDrop(document.getElementById(item.id)); item.contents=[]; updateEnzymeContents(item); 
+                c.forEach(x=>spawnProduct(item,x)); return;
             }
 
             if(starter && hasMalonyl && hasNADPH) {
-                item.contents = [];
-                updateEnzymeContents(item);
-                const el = document.getElementById(item.id);
-                el.classList.add('active-reaction');
+                const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => {
+                    item.contents=[]; updateEnzymeContents(item);
+                    let prod = null;
+                    if(starter==='acetyl_coa') prod='butyric_acid';
+                    else if(starter==='butyric_acid') prod='caproic_acid'; else if(starter==='caproic_acid') prod='caprylic_acid';
+                    else if(starter==='caprylic_acid') prod='capric_acid'; else if(starter==='capric_acid') prod='lauric_acid';
+                    else if(starter==='lauric_acid') prod='myristic_acid'; else if(starter==='myristic_acid') prod='palmitic_acid';
+                    else if(starter==='palmitic_acid') prod='stearic_acid';
+                    else if(starter==='acyl_coa_3') prod='valeric_acid'; else if(starter==='propionic_acid') prod='valeric_acid';
+                    else if(starter==='valeric_acid') prod='heptanoic_acid'; else if(starter==='heptanoic_acid') prod='nonanoic_acid';
+                    else if(starter==='nonanoic_acid') prod='undecanoic_acid'; else if(starter==='undecanoic_acid') prod='tridecanoic_acid';
+                    else if(starter==='tridecanoic_acid') prod='pentadecanoic_acid';
                     
-                    let product = null;
-                    
-                    if(starter === 'acetyl_coa') product = 'butyric_acid';
-                    
-                    // Even Chain Growth
-                    else if(starter === 'butyric_acid') product = 'caproic_acid';
-                    else if(starter === 'caproic_acid') product = 'caprylic_acid';
-                    else if(starter === 'caprylic_acid') product = 'capric_acid';
-                    else if(starter === 'capric_acid') product = 'lauric_acid';
-                    else if(starter === 'lauric_acid') product = 'myristic_acid';
-                    else if(starter === 'myristic_acid') product = 'palmitic_acid';
-                    else if(starter === 'palmitic_acid') product = 'stearic_acid';
-                    
-                    // Odd Chain Growth
-                    else if(starter === 'acyl_coa_3') product = 'valeric_acid'; // Propionyl -> Valeric
-                    else if(starter === 'propionic_acid') product = 'valeric_acid';
-                    
-                    else if(starter === 'valeric_acid') product = 'heptanoic_acid';
-                    else if(starter === 'heptanoic_acid') product = 'nonanoic_acid';
-                    else if(starter === 'nonanoic_acid') product = 'undecanoic_acid';
-                    else if(starter === 'undecanoic_acid') product = 'tridecanoic_acid';
-                    else if(starter === 'tridecanoic_acid') product = 'pentadecanoic_acid';
-                    
-                    if(product) spawnProduct(item, product);
-                    
+                    if(prod) spawnProduct(item, prod);
                     spawnProduct(item, 'co2');
                     el.classList.remove('active-reaction');
                 }, 800);
             }
         }
 
-        function triggerReaction(item, products) {
-            const el = document.getElementById(item.id);
-            el.classList.add('active-reaction');
-            
-            setTimeout(() => {
-                item.contents = [];
-                updateEnzymeContents(item);
-                products.forEach(pid => spawnProduct(item, pid));
-                el.classList.remove('active-reaction');
-            }, 800);
-        }
-
-        function spawnProduct(originItem, elemId) {
-            const uid = 'obj-' + (nextId++);
-            // Random scatter below
-            const offsetX = (Math.random() * 60) - 30;
-            const offsetY = 80 + (Math.random() * 20);
-            
-            const newItem = {
-                id: uid,
-                elemId: elemId,
-                type: 'molecule',
-                x: originItem.x + 100 + offsetX - 30, 
-                y: originItem.y + 100 + offsetY,
-                contents: []
-            };
-            
-            workbenchItems.push(newItem);
-            renderWorkbenchItem(newItem);
-            
-            // Pop animation
-            const el = document.getElementById(uid);
-            el.animate([
-                { transform: 'scale(0)', opacity: 0 },
-                { transform: 'scale(1)', opacity: 1 }
-            ], { duration: 300, easing: 'ease-out' });
-        }
-
-        // Start
         init();
-
     </script>
 </body>
 </html>
