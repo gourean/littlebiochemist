@@ -12,7 +12,7 @@
             font-family: 'Fredoka', sans-serif;
             background-color: #fff7ed; /* Warm creamy background */
             overflow: hidden;
-            touch-action: none;
+            touch-action: none; /* Prevents scrolling on the workbench canvas */
             user-select: none;
         }
 
@@ -20,6 +20,12 @@
         .inventory-scroll::-webkit-scrollbar { width: 6px; }
         .inventory-scroll::-webkit-scrollbar-track { background: #fff1f2; }
         .inventory-scroll::-webkit-scrollbar-thumb { background: #fb7185; border-radius: 4px; }
+        
+        /* Enable touch scrolling for inventory list specifically */
+        #inventory-list {
+            touch-action: pan-y; /* Allow vertical scrolling */
+            -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+        }
 
         /* Game Elements */
         .molecule {
@@ -99,20 +105,31 @@
 
         /* Tabs - Standard CSS */
         .tab-btn {
-            padding: 8px 4px; 
-            font-size: 11px;
+            padding: 8px 2px; /* Reduced horizontal padding for narrow screens */
+            font-size: 10px; /* Smaller font for mobile */
             font-weight: 700;
             color: #334155; 
             border-bottom: 2px solid transparent;
             transition: all 0.2s;
             flex: 1;
             text-align: center;
-            margin: 0 2px;
+            margin: 0 1px;
             border-top-left-radius: 6px;
             border-top-right-radius: 6px;
             background-color: rgba(255, 247, 237, 0.5); 
             cursor: pointer;
             white-space: nowrap; 
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Medium screen and up adjustments */
+        @media (min-width: 768px) {
+            .tab-btn {
+                padding: 8px 4px;
+                font-size: 11px;
+                margin: 0 2px;
+            }
         }
         
         .tab-btn:hover {
@@ -134,24 +151,24 @@
 
     <!-- Top Bar -->
     <header class="bg-white border-b-4 border-orange-200 p-3 flex justify-between items-center z-20 shadow-sm h-16 shrink-0">
-        <div class="flex items-center gap-3">
-            <h1 class="text-xl md:text-2xl font-bold text-orange-800 tracking-wide">LITTLE BIOCHEMIST</h1>
+        <div class="flex items-center gap-2 md:gap-3">
+            <h1 class="text-lg md:text-2xl font-bold text-orange-800 tracking-wide truncate">LITTLE BIOCHEMIST</h1>
             <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded border border-green-200 hidden md:inline">SANDBOX</span>
         </div>
-        <div class="flex gap-4 font-semibold text-slate-600">
-            <button onclick="resetGame()" class="text-sm bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded text-slate-500 transition">Clear Workbench</button>
+        <div class="flex gap-2 md:gap-4 font-semibold text-slate-600">
+            <button onclick="resetGame()" class="text-xs md:text-sm bg-slate-100 hover:bg-slate-200 px-2 md:px-3 py-1 rounded text-slate-500 transition whitespace-nowrap">Reset</button>
         </div>
     </header>
 
     <!-- Main Game Area -->
     <div class="flex-1 flex overflow-hidden relative">
         
-        <!-- Inventory Sidebar (Narrower) -->
-        <aside class="w-64 bg-white border-r border-orange-100 flex flex-col z-20 shadow-lg transition-all shrink-0">
+        <!-- Inventory Sidebar (Responsive width: 30% on mobile, fixed on larger) -->
+        <aside class="w-[30%] md:w-64 bg-white border-r border-orange-100 flex flex-col z-20 shadow-lg transition-all shrink-0">
             
             <!-- Search Bar -->
             <div class="p-2 border-b border-orange-50 bg-white">
-                <input type="text" id="search-bar" placeholder="Search..." class="w-full px-3 py-1 text-sm border border-orange-200 rounded-full focus:outline-none focus:border-orange-400 bg-orange-50/50 text-slate-600 placeholder-orange-300">
+                <input type="text" id="search-bar" placeholder="Search" class="w-full px-2 py-1 text-xs md:text-sm border border-orange-200 rounded-full focus:outline-none focus:border-orange-400 bg-orange-50/50 text-slate-600 placeholder-orange-300">
             </div>
 
             <!-- Tabs -->
@@ -162,22 +179,22 @@
             </div>
 
             <!-- List -->
-            <div id="inventory-list" class="flex-1 overflow-y-auto inventory-scroll p-2 grid grid-cols-1 gap-2 content-start">
+            <div id="inventory-list" class="flex-1 overflow-y-auto inventory-scroll p-1 md:p-2 grid grid-cols-1 gap-2 content-start">
                 <!-- Items injected here -->
             </div>
         </aside>
 
         <!-- Workbench -->
         <main id="workbench" class="flex-1 relative bg-orange-50/50 bg-[radial-gradient(#fed7aa_1px,transparent_1px)] [background-size:20px_20px]">
-            <div class="absolute top-4 left-4 text-orange-300 font-bold text-lg opacity-50 pointer-events-none select-none">
+            <div class="absolute top-4 left-4 text-orange-300 font-bold text-lg opacity-50 pointer-events-none select-none hidden md:block">
                 LIPID WORKBENCH
             </div>
             
-            <div id="tutorial-msg" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div class="bg-white/90 backdrop-blur px-8 py-6 rounded-2xl text-slate-600 text-center shadow-md border-2 border-orange-100 max-w-md">
-                    <p class="font-bold text-xl mb-2 text-orange-800">Lipid Metabolism Sandbox</p>
-                    <p class="text-sm mb-2">Drag <b>Molecules</b>, <b>Enzymes</b>, or <b>Pathways</b> from the tabs.</p>
-                    <p class="text-sm mb-2">Combine them to see metabolic reactions!</p>
+            <div id="tutorial-msg" class="absolute inset-0 flex items-center justify-center pointer-events-none p-4">
+                <div class="bg-white/90 backdrop-blur px-6 py-4 md:px-8 md:py-6 rounded-2xl text-slate-600 text-center shadow-md border-2 border-orange-100 max-w-md">
+                    <p class="font-bold text-lg md:text-xl mb-2 text-orange-800">Lipid Metabolism Sandbox</p>
+                    <p class="text-xs md:text-sm mb-2">Drag items from the tabs.</p>
+                    <p class="text-xs md:text-sm mb-2">Combine them to see metabolic reactions!</p>
                 </div>
             </div>
         </main>
@@ -185,18 +202,18 @@
     </div>
     
     <!-- Footer -->
-    <footer class="bg-white border-t border-orange-100 p-2 text-center text-[10px] text-slate-400 z-20">
+    <footer class="bg-white border-t border-orange-100 p-2 text-center text-[8px] md:text-[10px] text-slate-400 z-20">
         © 2025 Wong Gou Rean. All rights reserved.
     </footer>
 
     <!-- Disclaimer Modal -->
-    <div id="disclaimer-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full text-center border-4 border-orange-200 m-4">
-            <h2 class="text-2xl font-bold text-orange-800 mb-4">Disclaimer</h2>
-            <p class="text-slate-600 text-sm mb-6 leading-relaxed text-justify">
+    <div id="disclaimer-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full text-center border-4 border-orange-200">
+            <h2 class="text-xl md:text-2xl font-bold text-orange-800 mb-4">Disclaimer</h2>
+            <p class="text-slate-600 text-xs md:text-sm mb-6 leading-relaxed text-justify max-h-[60vh] overflow-y-auto">
                 The metabolic pathways and biochemical processes depicted in this game are simplified for educational purposes. While they are designed to illustrate key concepts within the scope of study, they may not fully reflect the complete complexity, accuracy or current scientific understanding of real biochemical mechanisms. You should refer to authoritative textbooks and academic resources for precise and comprehensive information.
             </p>
-            <button onclick="closeDisclaimer()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-full transition shadow-lg shadow-orange-500/30">
+            <button onclick="closeDisclaimer()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-full transition shadow-lg shadow-orange-500/30 text-sm">
                 Understand
             </button>
         </div>
@@ -621,7 +638,7 @@
              return wrapIcon(id, s, label);
         }
 
-        // --- CORRECTED CHOLESTEROL SVG (Simplified 4 squares) ---
+        // Simplified Cholesterol (4 Rings)
         function createCholesterol(id, label) {
             let s = svgStart(90, 60);
             const strokeColor = "#eab308"; // Yellow
@@ -1503,7 +1520,6 @@
                 el.classList.add('active-reaction');
                 
                 setTimeout(() => {
-                    el.classList.remove('active-reaction');
                     
                     // Products
                     spawnProduct(item, 'acetyl_coa');
@@ -1535,6 +1551,7 @@
 
                     if (nextAcyl) spawnProduct(item, nextAcyl);
 
+                    el.classList.remove('active-reaction');
                 }, 800);
             }
         }
@@ -1547,8 +1564,8 @@
                 const el = document.getElementById(item.id);
                 el.classList.add('active-reaction');
                 setTimeout(() => {
-                    el.classList.remove('active-reaction');
                     spawnProduct(item, '3_hydroxybutyrate');
+                    el.classList.remove('active-reaction');
                 }, 800);
             }
             else if (contents.includes('3_hydroxybutyrate')) {
@@ -1557,8 +1574,8 @@
                 const el = document.getElementById(item.id);
                 el.classList.add('active-reaction');
                 setTimeout(() => {
-                    el.classList.remove('active-reaction');
                     spawnProduct(item, 'ketone_body');
+                    el.classList.remove('active-reaction');
                 }, 800);
             }
         }
@@ -1607,7 +1624,6 @@
                 const el = document.getElementById(item.id);
                 el.classList.add('active-reaction');
                 setTimeout(() => {
-                    el.classList.remove('active-reaction');
                     
                     let product = null;
                     
@@ -1635,7 +1651,7 @@
                     if(product) spawnProduct(item, product);
                     
                     spawnProduct(item, 'co2');
-                    
+                    el.classList.remove('active-reaction');
                 }, 800);
             }
         }
@@ -1647,8 +1663,8 @@
             setTimeout(() => {
                 item.contents = [];
                 updateEnzymeContents(item);
-                el.classList.remove('active-reaction');
                 products.forEach(pid => spawnProduct(item, pid));
+                el.classList.remove('active-reaction');
             }, 800);
         }
 
