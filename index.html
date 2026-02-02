@@ -50,8 +50,9 @@
             z-index: 9999 !important;
             pointer-events: none;
             opacity: 0.9;
-            transform: scale(1.1) !important;
+            /* transform handled by JS now */
             filter: drop-shadow(0px 15px 30px rgba(0, 0, 0, 0.3));
+            transition: none !important;
         }
 
         .inventory-item {
@@ -186,6 +187,35 @@
             background-color: #fff;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
+
+        /* --- RESPONSIVE CONTAINERS --- */
+        .molecule-container {
+            width: 5rem;
+            /* w-20 = 5rem = 80px */
+            height: 5rem;
+        }
+
+        .enzyme-container {
+            width: 12rem;
+            /* w-48 = 12rem = 192px */
+            height: 10rem;
+            /* h-40 = 10rem = 160px */
+        }
+
+        @media (max-width: 768px) {
+            .molecule-container {
+                width: 4rem;
+                /* 48px - very compact */
+                height: 4rem;
+            }
+
+            .enzyme-container {
+                width: 8.5rem;
+                /* Compact mobile enzyme */
+                height: 7rem;
+                border-width: 2px;
+            }
+        }
     </style>
 </head>
 
@@ -248,7 +278,7 @@
 
             <!-- Trash Bin -->
             <div id="trash-bin"
-                class="trash-bin absolute bottom-12 right-4 w-16 h-16 md:w-20 md:h-20 bg-white/80 backdrop-blur rounded-2xl flex items-center justify-center shadow-lg z-10 transition-colors">
+                class="trash-bin absolute bottom-12 right-4 w-12 h-12 md:w-20 md:h-20 bg-white/80 backdrop-blur rounded-2xl flex items-center justify-center shadow-lg z-10 transition-colors">
                 <div class="pointer-events-none">
                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
                         stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -509,7 +539,14 @@
             element: null, // The visual DOM element
             source: 'workbench',
             dropTargets: [], // Cached targets for better performance
-            trashRect: null
+            trashRect: null,
+            startX: 0,
+            startY: 0,
+            initialLeft: 0,
+            initialTop: 0,
+            currentX: 0,
+            currentY: 0,
+            rafId: null
         };
 
         // --- GAME MANAGER (Campaign Logic) ---
@@ -668,8 +705,11 @@
                 const centerX = wbRect.width / 2;
                 const centerY = wbRect.height / 2;
 
+                // Scale factor for smaller screens (baseline 1200px width for tighter grouping)
+                const scale = Math.min(1, wbRect.width / 1200);
+
                 topic.startItems.forEach(item => {
-                    spawnItemSpecific(item.elemId, centerX + item.x, centerY + item.y);
+                    spawnItemSpecific(item.elemId, centerX + (item.x * scale), centerY + (item.y * scale));
                 });
 
                 renderWorkbench();
@@ -924,7 +964,7 @@
         }
 
         // --- SVG FACTORIES ---
-        const svgStart = (w, h) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" class="pointer-events-none block">`;
+        const svgStart = (w, h) => `<svg width="100%" height="100%" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" class="pointer-events-none block">`;
 
         function createGenericMolecule(id, label, color) { return wrapIcon(id, `${svgStart(50, 50)}<circle cx="25" cy="25" r="15" fill="white" stroke="${color}" stroke-width="2"/></svg>`, label); }
         function createMoleculeSmall(id, label, color) { return wrapIcon(id, `${svgStart(50, 50)}<circle cx="25" cy="25" r="20" fill="${color}" fill-opacity="0.2" stroke="${color}" stroke-width="2"/><text x="25" y="29" font-size="10" font-weight="bold" fill="${color}" text-anchor="middle">${label}</text></svg>`, label); }
@@ -970,11 +1010,11 @@
 
         function wrapIcon(id, svgContent, label) {
             return `
-            <div id="${id}" class="molecule flex flex-col items-center justify-center select-none w-20 h-20 transition-all cursor-grab active:cursor-grabbing">
-                <div class="transform transition-transform scale-100">
+            <div id="${id}" class="molecule molecule-container flex flex-col items-center justify-center select-none transition-all cursor-grab active:cursor-grabbing">
+                <div class="transform transition-transform scale-100 flex items-center justify-center w-full h-full p-3"> <!-- p-3 to shrink icon slightly -->
                     ${svgContent}
                 </div>
-                <span class="mt-1 text-[10px] font-bold bg-white/90 px-2 py-0.5 rounded-full text-slate-600 shadow-sm whitespace-nowrap border border-slate-100">${label}</span>
+                <span class="absolute -bottom-2 text-[10px] font-bold bg-white/90 px-2 py-0.5 rounded-full text-slate-600 shadow-sm whitespace-nowrap border border-slate-100 z-10 pointer-events-none">${label}</span>
             </div>`;
         }
 
@@ -983,12 +1023,13 @@
             const isPathway = data.category === 'pathways';
             const extraClass = isPathway ? 'pathway' : '';
             return `
-            <div id="${id}" class="molecule enzyme-box ${extraClass} select-none w-48 h-40 cursor-grab active:cursor-grabbing">
-                <div class="text-xs font-bold uppercase tracking-widest ${isPathway ? 'text-pink-700' : 'text-slate-500'} mb-2 pointer-events-none text-center px-2">${data.name}</div>
-                <div class="flex flex-wrap justify-center gap-1 w-full px-2 pointer-events-none min-h-[40px]" id="${id}-contents">
+            <div id="${id}" class="molecule enzyme-box enzyme-container ${extraClass} select-none cursor-grab active:cursor-grabbing">
+                <!-- Added pt-3 for top spacing like old design -->
+                <div class="text-[10px] md:text-xs font-bold uppercase tracking-widest ${isPathway ? 'text-pink-700' : 'text-slate-500'} mb-1 pointer-events-none text-center px-1 leading-tight flex-none pt-4">${data.name}</div>
+                <div class="flex flex-wrap justify-center gap-1 w-full px-1 pointer-events-none min-h-[20px] flex-1 items-center content-center" id="${id}-contents">
                     <span class="text-[9px] text-slate-400 italic">Drag items here</span>
                 </div>
-                <div class="mt-2 text-[9px] text-slate-400 text-center w-full px-2 leading-tight">
+                <div class="mt-1 text-[9px] text-slate-400 text-center w-full px-1 leading-tight flex-none pb-2">
                     Needs: ${data.requires.map(r => ELEMENTS[r] ? ELEMENTS[r].name : r).join(', ')}
                 </div>
             </div>`;
@@ -1001,17 +1042,25 @@
             const wbRect = wb.getBoundingClientRect();
 
             // Random scatter near center
+            // Random scatter near center, relative to viewport size
             const centerX = wbRect.width / 2;
             const centerY = wbRect.height / 2;
-            const offsetX = (Math.random() - 0.5) * 100;
-            const offsetY = (Math.random() - 0.5) * 100;
+            // 20% of viewport width/height spread
+            const offsetX = (Math.random() - 0.5) * (wbRect.width * 0.2);
+            const offsetY = (Math.random() - 0.5) * (wbRect.height * 0.2);
+
+            // Determine size based on type for centering
+            const isMolecule = ELEMENTS[elemId].category === 'molecules';
+            // Approximate sizes from CSS: Molecule=5rem(80px), Enzyme=12rem(192px)
+            // Hard to get exact before render, but we can estimate center offset
+            const sizeEstimate = isMolecule ? 40 : 96; // Half-width approximation
 
             const newItem = {
                 id: uid,
                 elemId: elemId,
-                type: ELEMENTS[elemId].category === 'molecules' ? 'molecule' : 'enzyme',
-                x: centerX + offsetX - 40,
-                y: centerY + offsetY - 40,
+                type: isMolecule ? 'molecule' : 'enzyme',
+                x: centerX + offsetX - sizeEstimate,
+                y: centerY + offsetY - sizeEstimate,
                 contents: []
             };
 
@@ -1066,11 +1115,16 @@
             dragState.lastTrashHovered = false;
 
             const rect = element.getBoundingClientRect();
-            const offsetX = clientX - rect.left;
-            const offsetY = clientY - rect.top;
 
-            dragState.offsetX = offsetX || (element.offsetWidth / 2);
-            dragState.offsetY = offsetY || (element.offsetHeight / 2);
+            // Capture initial state for Transform logic
+            dragState.startX = clientX;
+            dragState.startY = clientY;
+            dragState.initialLeft = rect.left;
+            dragState.initialTop = rect.top;
+
+            // Initialize current positions
+            dragState.currentX = clientX;
+            dragState.currentY = clientY;
 
             // CACHE drop targets so we don't query DOM on every move
             dragState.dropTargets = [];
@@ -1095,12 +1149,20 @@
 
             if (element.parentElement.id !== 'drag-layer') {
                 const layer = document.getElementById('drag-layer');
+                // For transform drag, we ideally want to keep the element where it is visually
+                // but move it to the drag layer. 
+                // Set absolute position once, then use transforms.
                 element.style.left = rect.left + 'px';
                 element.style.top = rect.top + 'px';
+                element.style.transform = 'translate3d(0,0,0) scale(1.1)';
+                element.style.willChange = 'transform'; // Hint browser
                 layer.appendChild(element);
             }
 
             element.classList.add('dragging');
+
+            // Start Animation Loop
+            dragState.rafId = requestAnimationFrame(updateDragVisual);
         }
 
         function handleGlobalMove(e) {
@@ -1108,17 +1170,33 @@
             e.preventDefault();
 
             const touch = e.touches ? e.touches[0] : e;
-            const x = touch.clientX - dragState.offsetX;
-            const y = touch.clientY - dragState.offsetY;
+            dragState.currentX = touch.clientX;
+            dragState.currentY = touch.clientY;
+            // logic is handled in updateDragVisual
+        }
 
-            dragState.element.style.left = x + 'px';
-            dragState.element.style.top = y + 'px';
+        function updateDragVisual() {
+            if (!dragState.active) return;
 
-            const cx = x + (dragState.element.offsetWidth / 2);
-            const cy = y + (dragState.element.offsetHeight / 2);
+            const dx = dragState.currentX - dragState.startX;
+            const dy = dragState.currentY - dragState.startY;
+
+            if (dragState.element) {
+                // Apply Transform
+                dragState.element.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.1)`;
+            }
+
+            // Hit Test Center
+            // We need to calculate where the center IS now based on initial + delta
+            const currentLeft = dragState.initialLeft + dx;
+            const currentTop = dragState.initialTop + dy;
+            const cx = currentLeft + (dragState.element.offsetWidth / 2);
+            const cy = currentTop + (dragState.element.offsetHeight / 2);
 
             checkHover(cx, cy);
             checkTrashHover(cx, cy);
+
+            dragState.rafId = requestAnimationFrame(updateDragVisual);
         }
 
         function checkHover(cx, cy) {
@@ -1141,7 +1219,8 @@
                     const prevTarget = dragState.dropTargets.find(t => t.id === dragState.lastHoveredId);
                     if (prevTarget && prevTarget.el) {
                         prevTarget.el.style.transform = 'scale(1)';
-                        prevTarget.el.style.borderColor = ELEMENTS[prevTarget.elemId].category === 'pathways' ? '#be185d' : ELEMENTS[prevTarget.elemId].border;
+                        // Reset to CSS default (Gray) unless it's a pathway (which uses class color)
+                        prevTarget.el.style.borderColor = '';
                     }
                 }
 
@@ -1174,22 +1253,33 @@
         function handleGlobalEnd(e) {
             if (!dragState.active) return;
 
+            // Stop loop
+            if (dragState.rafId) cancelAnimationFrame(dragState.rafId);
+
             const el = dragState.element;
             const item = dragState.item;
             const wb = document.getElementById('workbench');
             const wbRect = wb.getBoundingClientRect();
             const trash = document.getElementById('trash-bin');
 
-            const rect = el.getBoundingClientRect();
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top + rect.height / 2;
+            // Calculate final position from transform
+            // We need to commit the transform to actual top/left for placement
+            const dx = dragState.currentX - dragState.startX;
+            const dy = dragState.currentY - dragState.startY;
+
+            // Center coords for drop logic
+            const finalLeft = dragState.initialLeft + dx;
+            const finalTop = dragState.initialTop + dy;
+
+            const cx = finalLeft + (el.offsetWidth / 2);
+            const cy = finalTop + (el.offsetHeight / 2);
 
             // Cleanup any visual highlights before processing logic
             if (dragState.lastHoveredId) {
                 const prevTarget = dragState.dropTargets.find(t => t.id === dragState.lastHoveredId);
                 if (prevTarget && prevTarget.el) {
                     prevTarget.el.style.transform = 'scale(1)';
-                    prevTarget.el.style.borderColor = ELEMENTS[prevTarget.elemId].category === 'pathways' ? '#be185d' : ELEMENTS[prevTarget.elemId].border;
+                    prevTarget.el.style.borderColor = '';
                 }
             }
             if (dragState.lastTrashHovered) {
@@ -1237,19 +1327,27 @@
                 }
 
                 if (!consumed) {
-                    item.x = rect.left - wbRect.left;
-                    item.y = rect.top - wbRect.top;
+                    item.x = finalLeft - wbRect.left;
+                    item.y = finalTop - wbRect.top;
 
                     // Bounds Check
+                    const rightBound = wbRect.width - el.offsetWidth;
+                    const bottomBound = wbRect.height - el.offsetHeight;
+
                     if (item.x < 0) item.x = 0;
                     if (item.y < 0) item.y = 0;
-                    if (item.x > wbRect.width - 50) item.x = wbRect.width - 50;
-                    if (item.y > wbRect.height - 50) item.y = wbRect.height - 50;
+                    if (item.x > rightBound) item.x = rightBound;
+                    if (item.y > bottomBound) item.y = bottomBound;
 
                     el.classList.remove('dragging');
                     el.style.position = 'absolute';
+                    // Commit final pos
                     el.style.left = item.x + 'px';
                     el.style.top = item.y + 'px';
+                    // Reset transform and will-change
+                    el.style.transform = '';
+                    el.style.willChange = '';
+
                     el.style.zIndex = '';
                     wb.appendChild(el);
                 } else {
@@ -1274,6 +1372,7 @@
             dragState.trashRect = null;
             dragState.lastHoveredId = null;
             dragState.lastTrashHovered = false;
+            dragState.rafId = null;
         }
 
         function rejectDrop(el) {
@@ -1430,21 +1529,37 @@
         // --- REACTION HANDLERS ---
         function spawnProduct(originItem, elemId) {
             const uid = 'obj-' + (nextId++);
-            const offsetX = (Math.random() * 60 - 30);
-            const offsetY = 80 + (Math.random() * 20);
+
+            // Get Origin Element Size for relative placement
+            const originEl = document.getElementById(originItem.id);
+            const originRect = originEl ? originEl.getBoundingClientRect() : { width: 100, height: 100 };
+
+            // Spawn just outside the enzyme box
+            // Enzyme width is approx 12rem (192px) or 10rem (160px) on mobile
+            // We want to spawn products slightly to the right/bottom
+
+            const offsetX = (Math.random() * 40 - 20);
+            const offsetY = (Math.random() * 20);
+
+            // Dynamic offset based on enzyme size
+            const spawnBaseX = originRect.width * 0.6;
+            const spawnBaseY = originRect.height * 0.6;
 
             const newItem = {
                 id: uid, elemId: elemId, type: 'molecule',
-                x: originItem.x + 100 + offsetX - 30,
-                y: originItem.y + 100 + offsetY,
+                x: originItem.x + spawnBaseX + offsetX,
+                y: originItem.y + spawnBaseY + offsetY,
                 contents: []
             };
 
             // Boundary checks
             const wb = document.getElementById('workbench');
             const rect = wb.getBoundingClientRect();
-            if (newItem.x > rect.width - 50) newItem.x = rect.width - 80;
-            if (newItem.y > rect.height - 50) newItem.y = rect.height - 80;
+            // Molecule size approx 80px (5rem) or 56px (3.5rem)
+            const molParams = rect.width < 768 ? 56 : 80;
+
+            if (newItem.x > rect.width - molParams) newItem.x = rect.width - molParams;
+            if (newItem.y > rect.height - molParams) newItem.y = rect.height - molParams;
 
             workbenchItems.push(newItem);
 
