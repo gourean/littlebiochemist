@@ -233,7 +233,7 @@
                 <div class="flex gap-1">
                     <span id="mode-badge"
                         class="text-[10px] text-green-700 bg-green-100 border border-green-200 px-2 py-0.5 rounded-full font-bold tracking-wider w-fit cursor-pointer hover:bg-green-200 transition"
-                        onclick="toggleGameMode()">LIPID SANDBOX</span>
+                        onclick="toggleGameMode()">SANDBOX</span>
                 </div>
             </div>
         </div>
@@ -276,17 +276,99 @@
                 </div>
             </div>
 
-            <!-- Trash Bin -->
-            <div id="trash-bin"
-                class="trash-bin absolute bottom-12 right-4 w-12 h-12 md:w-20 md:h-20 bg-white/80 backdrop-blur rounded-2xl flex items-center justify-center shadow-lg z-10 transition-colors">
-                <div class="pointer-events-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
-                        stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
+            <!-- Tool Station -->
+            <div id="tool-station" class="absolute bottom-12 right-4 flex flex-col items-end z-10 select-none">
+
+                <!-- Tool Selection Menu (Hidden by default) -->
+                <div id="tool-menu"
+                    class="hidden mb-4 flex flex-col gap-2 transition-all duration-300 origin-bottom-right">
+                    <button onclick="setTool('cloner')"
+                        class="flex items-center justify-between gap-3 bg-white hover:bg-purple-50 p-2 rounded-xl shadow-md border border-purple-200 group transition-all w-full">
+                        <span class="text-sm font-bold text-slate-600 group-hover:text-purple-600 px-2">Cloner</span>
+                        <div
+                            class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="stroke-current"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <text x="12" y="16" font-family="sans-serif" font-size="14" font-weight="900"
+                                    text-anchor="middle" fill="currentColor" stroke="none">×2</text>
+                            </svg>
+                        </div>
+                    </button>
+                    <button onclick="setTool('analyzer')"
+                        class="flex items-center justify-between gap-3 bg-white hover:bg-blue-50 p-2 rounded-xl shadow-md border border-blue-200 group transition-all w-full">
+                        <span class="text-sm font-bold text-slate-600 group-hover:text-blue-600 px-2">Analyzer</span>
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="stroke-current"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                        </div>
+                    </button>
+                    <button onclick="setTool('counter')"
+                        class="flex items-center justify-between gap-3 bg-white hover:bg-green-50 p-2 rounded-xl shadow-md border border-green-200 group transition-all w-full">
+                        <span class="text-sm font-bold text-slate-600 group-hover:text-green-600 px-2">Counter</span>
+                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center text-green-600">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="stroke-current"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <text x="8" y="11" font-family="sans-serif" font-size="10" font-weight="900"
+                                    text-anchor="middle" fill="currentColor" stroke="none">1</text>
+                                <text x="16" y="11" font-family="sans-serif" font-size="10" font-weight="900"
+                                    text-anchor="middle" fill="currentColor" stroke="none">2</text>
+                                <text x="8" y="21" font-family="sans-serif" font-size="10" font-weight="900"
+                                    text-anchor="middle" fill="currentColor" stroke="none">3</text>
+                                <text x="16" y="21" font-family="sans-serif" font-size="10" font-weight="900"
+                                    text-anchor="middle" fill="currentColor" stroke="none">4</text>
+                            </svg>
+                        </div>
+                    </button>
+                    <button onclick="setTool('bin')"
+                        class="flex items-center justify-between gap-3 bg-white hover:bg-red-50 p-2 rounded-xl shadow-md border border-red-200 group transition-all w-full">
+                        <span class="text-sm font-bold text-slate-600 group-hover:text-red-600 px-2">Bin</span>
+                        <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center text-red-600">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="stroke-current"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path
+                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                                </path>
+                            </svg>
+                        </div>
+                    </button>
+                </div>
+
+
+                <!-- Counter Overlay List (Visible only when Counter is active or has items) -->
+                <div id="counter-list"
+                    class="hidden absolute bottom-24 right-0 bg-white/90 backdrop-blur rounded-xl shadow-lg border border-slate-200 p-2 mb-2 w-48 max-h-48 overflow-y-auto text-xs flex-col gap-1 z-0">
+                    <!-- Items injected here -->
+                </div>
+
+                <!-- Main Tool Button (Drop Target) -->
+                <div id="current-tool-slot" onclick="toggleToolMenu()"
+                    class="w-16 h-16 md:w-20 md:h-20 bg-white/90 backdrop-blur rounded-2xl flex items-center justify-center shadow-lg border-2 border-slate-200 transition-all cursor-pointer hover:scale-105 active:scale-95 group relative z-10">
+                    <!-- Icon -->
+                    <div id="tool-icon"
+                        class="text-3xl md:text-4xl pointer-events-none transition-transform group-hover:rotate-12 text-red-600">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="stroke-current"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                            </path>
+                        </svg>
+                    </div>
+                    <!-- Label -->
+                    <div id="tool-label"
+                        class="absolute -bottom-6 text-[10px] font-bold text-slate-500 bg-white/80 px-2 py-0.5 rounded-full whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                        Trash Bin</div>
+                    <!-- Indicator Dot (for active state or count) -->
+                    <div id="tool-indicator"
+                        class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-sm animate-bounce">
+                    </div>
                 </div>
             </div>
+
+
 
             <!-- Topic Complete Modal -->
             <div id="topic-complete-modal"
@@ -383,7 +465,7 @@
 
             <button onclick="openTopicSelect()"
                 class="group relative bg-white p-4 rounded-xl border-2 border-slate-200 hover:border-purple-400 transition-all shadow-sm hover:shadow-md text-left">
-                <div class="font-bold text-slate-800 text-lg group-hover:text-purple-600">🎓 Topic mode</div>
+                <div class="font-bold text-slate-800 text-lg group-hover:text-purple-600">🎓 Topic Mode</div>
                 <div class="text-xs text-slate-500 mt-1">Structured learning. Complete objectives to unlock new
                     metabolic concepts.</div>
             </button>
@@ -407,12 +489,100 @@
         </div>
     </div>
 
-    <!-- Drag Layer -->
+    <!-- Analyzer Modal (Simple) -->
+    <div id="analyzer-modal"
+        class="hidden fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-none transition-opacity duration-300 opacity-0">
+        <div class="bg-white/95 p-6 rounded-2xl shadow-xl max-w-sm w-full border-2 border-blue-200 pointer-events-auto transform scale-90 transition-transform duration-300"
+            id="analyzer-content-box">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-xl font-bold text-slate-800" id="analyzer-title">Molecule Name</h2>
+                <button onclick="closeAnalyzer()" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div class="flex items-center gap-3">
+                    <div id="analyzer-icon"
+                        class="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">PROPERTIES</div>
+                        <div id="analyzer-props"
+                            class="text-sm text-slate-600 font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            C: 6 | H: 12 | O: 6
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                    <div class="text-xs font-bold text-blue-800 uppercase tracking-widest mb-1">DESCRIPTION</div>
+                    <p id="analyzer-desc" class="text-sm text-blue-900 leading-relaxed">
+                        A simple sugar that is an important energy source in living organisms and is a component of many
+                        carbohydrates.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="drag-layer" class="fixed inset-0 pointer-events-none z-[9999]"></div>
 
     <script>
         function createBicarbonate(id, l) { return wrapIcon(id, `${svgStart(50, 40)}<circle cx="25" cy="20" r="5" class="atom-c"/><circle cx="25" cy="10" r="4" class="atom-o"/><circle cx="15" cy="27" r="4" class="atom-o"/><circle cx="35" cy="27" r="4" class="atom-o"/></svg>`, l); }
         function createMethylmalonylCoA(id, l) { return wrapIcon(id, `${svgStart(75, 50)}<rect x="45" y="15" width="25" height="18" rx="4" fill="#94a3b8"/><text x="57" y="28" font-size="8" fill="white" text-anchor="middle">CoA</text><line x1="35" y1="24" x2="45" y2="24" stroke="#333" stroke-width="2"/><circle cx="5" cy="24" r="5" class="atom-c"/><circle cx="15" cy="24" r="5" class="atom-c"/><circle cx="25" cy="24" r="5" class="atom-c"/><circle cx="35" cy="24" r="5" class="atom-c"/><circle cx="25" cy="14" r="5" class="atom-c" stroke="#333" stroke-width="1"/></svg>`, l || 'Methylmalonyl-CoA'); }
+
+        // --- SOUND MANAGER ---
+        const SoundManager = {
+            ctx: null,
+            init: function () {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+            },
+            play: function (type) {
+                if (!this.ctx) this.init();
+                if (!this.ctx || this.ctx.state === 'suspended') {
+                    if (this.ctx) this.ctx.resume().catch(() => { });
+                }
+                if (!this.ctx) return;
+
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                if (type === 'reaction') {
+                    // Chime: High pitch sine/triangle
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(500, t);
+                    osc.frequency.exponentialRampToValueAtTime(1000, t + 0.1);
+
+                    gain.gain.setValueAtTime(0, t);
+                    gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+
+                    osc.start(t);
+                    osc.stop(t + 0.4);
+                } else if (type === 'reject') {
+                    // Buzz: Low saw
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, t);
+                    osc.frequency.linearRampToValueAtTime(100, t + 0.2);
+
+                    gain.gain.setValueAtTime(0.2, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+
+                    osc.start(t);
+                    osc.stop(t + 0.3);
+                }
+            }
+        };
 
         // --- DATA ---
         const ELEMENTS = {
@@ -429,6 +599,10 @@
             'citrate': { name: 'Citrate', category: 'molecules', desc: 'Intermediate of TCA cycle', render: (id, label) => createCitrate(id, label) },
             'oaa': { name: 'Oxaloacetate', category: 'molecules', desc: 'TCA acceptor.', render: (id, label) => createOAA(id, label) },
             'malate': { name: 'Malate', category: 'molecules', desc: 'Intermediate of TCA cycle', render: (id, label) => createMalate(id, label) },
+            'isocitrate': { name: 'Isocitrate', category: 'molecules', desc: 'Isomer of Citrate', render: (id, label) => createIsocitrate(id, label) },
+            'alpha_ketoglutarate': { name: 'α-Ketoglutarate', category: 'molecules', desc: 'TCA Intermediate', render: (id, label) => createAlphaKG(id, label) },
+            'fumarate': { name: 'Fumarate', category: 'molecules', desc: 'TCA Intermediate', render: (id, label) => createFumarate(id, label) },
+            'lactate': { name: 'Lactate', category: 'molecules', desc: 'Anaerobic product', render: (id, label) => createLactate(id, label) },
             'amp': { name: 'AMP', category: 'molecules', desc: 'Adenosine monophosphate', render: (id, label) => createMoleculeSmall(id, 'AMP', '#94a3b8') },
             'adp': { name: 'ADP', category: 'molecules', desc: 'Adenosine diphosphate', render: (id, label) => createMoleculeSmall(id, 'ADP', '#fbbf24') },
             'nad': { name: 'NAD+', category: 'molecules', desc: 'Oxidizing agent', render: (id, label) => createMoleculeSmall(id, 'NAD+', '#8b5cf6') },
@@ -493,6 +667,7 @@
             'co2': { name: 'CO2', category: 'molecules', desc: 'Carbon dioxide', render: (id, label) => createMoleculeSmall(id, 'CO2', '#64748b') },
             'nadph': { name: 'NADPH', category: 'molecules', desc: 'Reducing agent', render: (id, label) => createMoleculeSmall(id, 'NADPH', '#f472b6') },
             'nadh': { name: 'NADH', category: 'molecules', desc: 'Electron carrier.', render: (id, label) => createMoleculeSmall(id, 'NADH', '#8b5cf6') },
+            'fad': { name: 'FAD', category: 'molecules', desc: 'Oxidized carrier.', render: (id, label) => createMoleculeSmall(id, 'FAD', '#a78bfa') },
             'fadh2': { name: 'FADH2', category: 'molecules', desc: 'Electron carrier.', render: (id, label) => createMoleculeSmall(id, 'FADH2', '#8b5cf6') },
             'bicarbonate': { name: 'Bicarbonate', category: 'molecules', desc: 'HCO3-', render: (id, label) => createBicarbonate(id, label) },
             'methylmalonyl_coa': { name: 'Methylmalonyl-CoA', category: 'molecules', desc: 'Branched C4-CoA', render: (id, label) => createMethylmalonylCoA(id, label) },
@@ -503,25 +678,32 @@
             'citrate_synthase': { name: 'Citrate Synthase', category: 'enzymes', desc: 'Produce Citrate', bg: '#f0fdf4', border: '#16a34a', requires: ['acetyl_coa', 'oaa'], produces: ['citrate'] },
             'citrate_lyase': { name: 'Citrate Lyase', category: 'enzymes', desc: 'Produce OAA and Acetyl CoA', bg: '#f0fdf4', border: '#16a34a', requires: ['citrate'], produces: ['acetyl_coa', 'oaa'] },
             'malic_enzyme': { name: 'Malic Enzyme', category: 'enzymes', desc: 'Produce NADPH', bg: '#fae8ff', border: '#a21caf', requires: ['malate'], produces: ['pyruvate', 'nadph', 'co2'] },
-            'acyltransferase': { name: 'Acyltransferase', category: 'enzymes', desc: 'Esterification of fatty acids', bg: '#ffedd5', border: '#c2410c', special: true, requires: [], produces: [] },
-            'lipase': { name: 'Lipase', category: 'enzymes', desc: 'Generic lipase hydrolyse lipids', bg: '#fef3c7', border: '#d97706', special: true, requires: [], produces: [] },
+            'acyltransferase': { name: 'Acyltransferase', category: 'enzymes', desc: 'Esterification of fatty acids', bg: '#ffedd5', border: '#c2410c', special: true, requires: [], produces: [], displayNeeds: 'Target: Glycerol / Lipids' },
+            'lipase': { name: 'Lipase', category: 'enzymes', desc: 'Generic lipase hydrolyse lipids', bg: '#fef3c7', border: '#d97706', special: true, requires: [], produces: [], displayNeeds: 'Target: Triglycerides' },
             'acyl_synthetase': { name: 'Acyl-CoA Synthetase', category: 'enzymes', desc: 'Activate FA.', bg: '#ffedd5', border: '#c2410c', special: true, requires: ['atp'], produces: ['amp'] },
-            'thiolase': { name: 'Thiolase', category: 'enzymes', desc: 'Cleavage/condensation', bg: '#e0e7ff', border: '#4338ca', special: true, requires: [], produces: [] },
+            'thiolase': { name: 'Thiolase', category: 'enzymes', desc: 'Cleavage/condensation', bg: '#e0e7ff', border: '#4338ca', special: true, requires: [], produces: [], displayNeeds: 'Reversible: Acetyl-CoA \u2194 Acetoacetyl-CoA' },
             'hmg_synthase': { name: 'HMG-CoA Synthase', category: 'enzymes', desc: 'Produce HMG Co-A', bg: '#fae8ff', border: '#86198f', requires: ['acetoacetyl_coa', 'acetyl_coa'], produces: ['hmg_coa'] },
             'hmg_lyase': { name: 'HMG-CoA Lyase', category: 'enzymes', desc: 'Produce Ketone bodies', bg: '#d1fae5', border: '#059669', requires: ['hmg_coa'], produces: ['ketone_body', 'acetyl_coa'] },
             'hmg_reductase': { name: 'HMG-CoA Reductase', category: 'enzymes', desc: 'Produce Mevalonate', bg: '#fce7f3', border: '#db2777', requires: ['hmg_coa'], produces: ['mevalonate'] },
-            '3hb_dehydrogenase': { name: '3-HB Dehydrogenase', category: 'enzymes', desc: 'Ketone Redox.', bg: '#ccfbf1', border: '#14b8a6', special: true, requires: [], produces: [] },
+            '3hb_dehydrogenase': { name: '3-HB Dehydrogenase', category: 'enzymes', desc: 'Ketone Redox.', bg: '#ccfbf1', border: '#14b8a6', special: true, requires: [], produces: [], displayNeeds: 'Reversible: Ketone \u2194 3-HB' },
             'acc': { name: 'Acetyl-CoA Carboxylase', category: 'enzymes', desc: 'Produce Malanyl-coA', bg: '#ecfccb', border: '#65a30d', requires: ['acetyl_coa', 'bicarbonate', 'atp'], produces: ['malonyl_coa', 'adp'] },
             'fas': { name: 'Fatty Acid Synthase', category: 'enzymes', desc: 'Multienzymatic complex', bg: '#dcfce7', border: '#15803d', special: true, requires: ['malonyl_coa', 'nadph'], produces: [] },
             'pyruvate_carboxylase': { name: 'Pyruvate Carboxylase', category: 'enzymes', desc: 'Replenishes OAA.', bg: '#fefce8', border: '#ca8a04', requires: ['pyruvate', 'bicarbonate', 'atp'], produces: ['oaa', 'adp'] },
-            'malate_dehydrogenase': { name: 'Malate Dehydrogenase', category: 'enzymes', desc: 'Reversible conversion.', bg: '#e0f2fe', border: '#0284c7', special: true, requires: [], produces: [] },
+            'malate_dehydrogenase': { name: 'Malate Dehydrogenase', category: 'enzymes', desc: 'Reversible conversion.', bg: '#e0f2fe', border: '#0284c7', special: true, requires: [], produces: [], displayNeeds: 'Reversible: Malate \u2194 OAA' },
             'propionyl_coa_carboxylase': { name: 'Propionyl-CoA Carboxylase', category: 'enzymes', desc: 'Propionate breakdown', bg: '#ecfccb', border: '#65a30d', requires: ['acyl_coa_3', 'bicarbonate', 'atp'], produces: ['methylmalonyl_coa', 'adp'] },
             'methylmalonyl_coa_mutase': { name: 'Methylmalonyl-CoA Mutase', category: 'enzymes', desc: 'Isomerization to Succinyl-CoA', bg: '#e0e7ff', border: '#4338ca', requires: ['methylmalonyl_coa'], produces: ['succinyl_coa'] },
+            'lactate_dehydrogenase': { name: 'Lactate Dehydrogenase', category: 'enzymes', desc: 'Pyruvate to Lactate', bg: '#dbeafe', border: '#1e40af', requires: ['pyruvate', 'nadh'], produces: ['lactate', 'nad'] },
+            'aconitase': { name: 'Aconitase', category: 'enzymes', desc: 'Citrate isomerization', bg: '#f0fdf4', border: '#16a34a', requires: ['citrate'], produces: ['isocitrate'] },
+            'isocitrate_dehydrogenase': { name: 'Isocitrate Dehydrogenase', category: 'enzymes', desc: 'TCA Step', bg: '#f0fdf4', border: '#16a34a', requires: ['isocitrate', 'nad'], produces: ['alpha_ketoglutarate', 'co2', 'nadh'] },
+            'alpha_ketoglutarate_dehydrogenase': { name: 'α-Ketoglutarate Dehydrogenase', category: 'enzymes', desc: 'TCA Step', bg: '#f0fdf4', border: '#16a34a', requires: ['alpha_ketoglutarate', 'nad'], produces: ['succinyl_coa', 'co2', 'nadh'] },
+            'succinyl_coa_synthetase': { name: 'Succinyl-CoA Synthetase', category: 'enzymes', desc: 'TCA Step (CoA removal)', bg: '#f0fdf4', border: '#16a34a', requires: ['succinyl_coa'], produces: ['succinate', 'atp'] },
+            'succinate_dehydrogenase': { name: 'Succinate Dehydrogenase', category: 'enzymes', desc: 'TCA Step (Oxidation)', bg: '#f0fdf4', border: '#16a34a', requires: ['succinate', 'fad'], produces: ['fumarate', 'fadh2'] },
+            'fumarase': { name: 'Fumarase', category: 'enzymes', desc: 'Hydration of Fumarate', bg: '#f0fdf4', border: '#16a34a', requires: ['fumarate', 'water'], produces: ['malate'] },
 
             // --- PATHWAYS ---
-            'glycolysis': { name: 'Glycolysis', category: 'pathways', desc: 'Glucose Breakdown.', bg: '#dbeafe', border: '#1d4ed8', requires: ['glucose'], produces: ['pyruvate', 'pyruvate', 'nadh', 'nadh', 'atp'] },
-            'etc': { name: 'Electron Transport Chain', category: 'pathways', desc: 'Oxidative phosphorylation', bg: '#e0e7ff', border: '#4338ca', special: true, requires: [], produces: [] },
-            'beta_oxidation': { name: 'Beta-Oxidation', category: 'pathways', desc: 'Major pathway to breakdown FA', bg: '#ffedd5', border: '#c2410c', special: true, requires: [], produces: ['acetyl_coa', 'nadh', 'fadh2'] },
+            'glycolysis': { name: 'Glycolysis', category: 'pathways', desc: 'Glucose Breakdown.', bg: '#dbeafe', border: '#1d4ed8', requires: ['glucose'], produces: ['pyruvate', 'pyruvate', 'nadh', 'nadh', 'atp', 'atp'] },
+            'etc': { name: 'Electron Transport Chain', category: 'pathways', desc: 'Oxidative phosphorylation', bg: '#e0e7ff', border: '#4338ca', special: true, requires: [], produces: [], displayNeeds: 'Input: NADH / FADH2' },
+            'beta_oxidation': { name: 'Beta-Oxidation', category: 'pathways', desc: 'Major pathway to breakdown FA', bg: '#ffedd5', border: '#c2410c', special: true, requires: [], produces: ['acetyl_coa', 'nadh', 'fadh2'], displayNeeds: 'Input: Acyl-CoA (Fatty Acid)' },
             'cholesterol_synth': { name: 'Cholesterol Pathway', category: 'pathways', desc: 'Multi steps process', bg: '#fdf2f8', border: '#be185d', requires: ['mevalonate', 'atp'], produces: ['cholesterol'] },
             'tca_cycle': { name: 'TCA Cycle', category: 'pathways', desc: 'Citric acid cycle/Krebs cycle', bg: '#f3f4f6', border: '#475569', requires: ['acetyl_coa'], produces: ['co2', 'co2', 'atp', 'fadh2', 'nadh', 'nadh', 'nadh'] },
             'spontaneous_pathway': { name: 'Spontaneous', category: 'pathways', desc: 'A reaction that occur by itself', bg: '#fef2f2', border: '#ef4444', requires: ['ketone_body'], produces: ['acetone', 'co2'] }
@@ -532,6 +714,10 @@
         let workbenchItems = [];
         let nextId = 0;
 
+        // Tool System State
+        let currentTool = 'bin'; // 'bin', 'counter', 'analyzer', 'cloner'
+        let counterMap = {}; // { elemId: count }
+
         // Drag State
         let dragState = {
             active: false,
@@ -539,7 +725,7 @@
             element: null, // The visual DOM element
             source: 'workbench',
             dropTargets: [], // Cached targets for better performance
-            trashRect: null,
+            toolRect: null, // Was trashRect
             startX: 0,
             startY: 0,
             initialLeft: 0,
@@ -621,6 +807,37 @@
                         // Just check for 'ketone_body' specifically.
                         return workbenchItems.some(i => i.elemId === 'ketone_body');
                     }
+                },
+                {
+                    id: 'tca_cycle',
+                    title: 'TCA Cycle',
+                    objective: 'Complete the cycle: Start with OAA + Acetyl-CoA and regenerate OAA.',
+                    desc: 'The Citric Acid Cycle is a series of chemical reactions to release stored energy.',
+                    allowedInventory: [
+                        'molecules', 'oaa', 'acetyl_coa', 'nad', 'fad', 'atp', 'adp', 'water', 'fadh2', 'nadh', 'co2',
+                        'citrate', 'isocitrate', 'alpha_ketoglutarate', 'succinyl_coa', 'succinate', 'fumarate', 'malate',
+                        'enzymes', 'citrate_synthase', 'aconitase', 'isocitrate_dehydrogenase',
+                        'alpha_ketoglutarate_dehydrogenase', 'succinyl_coa_synthetase',
+                        'succinate_dehydrogenase', 'fumarase', 'malate_dehydrogenase', 'pyruvate_dehydrogenase'
+                    ],
+                    startItems: [
+                        { elemId: 'oaa', x: -60, y: 0 },
+                        { elemId: 'acetyl_coa', x: 60, y: 0 },
+                        { elemId: 'citrate_synthase', x: 0, y: 120 },
+                        { elemId: 'nad', x: -120, y: -100 },
+                        { elemId: 'nad', x: -110, y: -90 },
+                        { elemId: 'nad', x: -100, y: -80 },
+                        { elemId: 'fad', x: 110, y: -90 },
+                        { elemId: 'water', x: 0, y: -120 }
+                    ],
+                    checkWin: () => {
+                        // Win condition logic:
+                        // Simple check for reasonable progress in cycle (generation of energy carriers)
+                        const nadh = workbenchItems.filter(i => i.elemId === 'nadh').length;
+                        const fadh2 = workbenchItems.filter(i => i.elemId === 'fadh2').length;
+                        // 3 NADH and 1 FADH2 per turn approx
+                        return nadh >= 3 && fadh2 >= 1;
+                    }
                 }
             ],
 
@@ -663,7 +880,7 @@
                 const tutorial = document.getElementById('tutorial-msg');
 
                 if (newMode === 'campaign') {
-                    badge.innerText = 'CAMPAIGN BETA';
+                    badge.innerText = 'TOPIC';
                     badge.className = "text-[10px] text-purple-700 bg-purple-100 border border-purple-200 px-2 py-0.5 rounded-full font-bold tracking-wider w-fit cursor-pointer hover:bg-purple-200 transition";
                     hud.classList.remove('hidden');
                     tutorial.classList.add('hidden'); // Force hide tutorial in campaign
@@ -672,7 +889,7 @@
                     if (this.checkLoop) clearInterval(this.checkLoop);
                     this.checkLoop = setInterval(() => this.checkWinCondition(), 1000);
                 } else {
-                    badge.innerText = 'LIPID SANDBOX';
+                    badge.innerText = 'SANDBOX';
                     badge.className = "text-[10px] text-green-700 bg-green-100 border border-green-200 px-2 py-0.5 rounded-full font-bold tracking-wider w-fit cursor-pointer hover:bg-green-200 transition";
                     hud.classList.add('hidden');
                     // tutorial.classList.remove('hidden'); // Maybe?
@@ -968,7 +1185,7 @@
 
         function createGenericMolecule(id, label, color) { return wrapIcon(id, `${svgStart(50, 50)}<circle cx="25" cy="25" r="15" fill="white" stroke="${color}" stroke-width="2"/></svg>`, label); }
         function createMoleculeSmall(id, label, color) { return wrapIcon(id, `${svgStart(50, 50)}<circle cx="25" cy="25" r="20" fill="${color}" fill-opacity="0.2" stroke="${color}" stroke-width="2"/><text x="25" y="29" font-size="10" font-weight="bold" fill="${color}" text-anchor="middle">${label}</text></svg>`, label); }
-        function createGlucose(id, label) { return wrapIcon(id, `${svgStart(50, 50)}<polygon points="25,5 45,15 45,35 25,45 5,35 5,15" fill="none" stroke="#3b82f6" stroke-width="3" /></svg>`, label); }
+        function createGlucose(id, label) { return wrapIcon(id, `${svgStart(50, 50)}<polygon points="15,7.7 35,7.7 45,25 35,42.3 15,42.3 5,25" fill="none" stroke="#3b82f6" stroke-width="3" /></svg>`, label); }
         function createPyruvate(id, label) { return wrapIcon(id, `${svgStart(50, 50)}<circle cx="15" cy="25" r="6" class="atom-c"/><circle cx="25" cy="25" r="6" class="atom-c"/><circle cx="35" cy="25" r="6" class="atom-c"/></svg>`, label); }
 
         function createTAG(id, label) {
@@ -999,6 +1216,10 @@
         function createMalate(id, l) { return wrapIcon(id, `${svgStart(60, 40)}<circle cx="15" cy="25" r="5" class="atom-c"/><circle cx="25" cy="15" r="5" class="atom-c"/><circle cx="35" cy="25" r="5" class="atom-c"/><circle cx="45" cy="15" r="5" class="atom-c"/></svg>`, l); }
         function createGlycerol(id, l) { return wrapIcon(id, `${svgStart(40, 60)}<line x1="20" y1="10" x2="20" y2="50" stroke="#94a3b8" stroke-width="6" stroke-linecap="round"/><circle cx="20" cy="15" r="4" fill="white" stroke="#94a3b8" stroke-width="2"/><circle cx="20" cy="30" r="4" fill="white" stroke="#94a3b8" stroke-width="2"/><circle cx="20" cy="45" r="4" fill="white" stroke="#94a3b8" stroke-width="2"/></svg>`, l); }
         function createAcetoAcetylCoA(id, l) { return wrapIcon(id, `${svgStart(70, 40)}<rect x="40" y="10" width="25" height="20" rx="4" fill="#94a3b8"/><text x="52" y="24" font-size="8" fill="white" text-anchor="middle">CoA</text><circle cx="10" cy="20" r="5" class="atom-c"/><circle cx="20" cy="20" r="5" class="atom-c"/><circle cx="30" cy="20" r="5" class="atom-c"/><circle cx="40" cy="20" r="5" class="atom-c"/></svg>`, l); }
+        function createLactate(id, l) { return wrapIcon(id, `${svgStart(50, 40)}<circle cx="15" cy="20" r="6" class="atom-c"/><circle cx="25" cy="20" r="6" class="atom-c"/><circle cx="35" cy="20" r="6" class="atom-c"/><circle cx="25" cy="10" r="4" class="atom-o" fill="none" stroke="#ef4444" stroke-width="2"/></svg>`, l); }
+        function createIsocitrate(id, l) { return wrapIcon(id, `${svgStart(60, 50)}<circle cx="10" cy="15" r="5" class="atom-c"/><circle cx="20" cy="15" r="5" class="atom-c"/><circle cx="30" cy="15" r="5" class="atom-c"/><circle cx="40" cy="15" r="5" class="atom-c"/><circle cx="50" cy="15" r="5" class="atom-c"/><circle cx="30" cy="25" r="5" class="atom-c"/></svg>`, l); }
+        function createAlphaKG(id, l) { return wrapIcon(id, `${svgStart(60, 40)}<circle cx="10" cy="20" r="5" class="atom-c"/><circle cx="20" cy="20" r="5" class="atom-c"/><circle cx="30" cy="20" r="5" class="atom-c"/><circle cx="40" cy="20" r="5" class="atom-c"/><circle cx="50" cy="20" r="5" class="atom-c"/><circle cx="50" cy="12" r="4" class="atom-o"/></svg>`, l); }
+        function createFumarate(id, l) { return wrapIcon(id, `${svgStart(60, 40)}<circle cx="15" cy="20" r="5" class="atom-c"/><circle cx="25" cy="15" r="5" class="atom-c"/><circle cx="35" cy="25" r="5" class="atom-c"/><circle cx="45" cy="20" r="5" class="atom-c"/></svg>`, l); }
         function createHMGCoA(id, l) { return wrapIcon(id, `${svgStart(70, 50)}<rect x="40" y="25" width="25" height="15" rx="4" fill="#94a3b8"/><text x="52" y="35" font-size="7" fill="white" text-anchor="middle">CoA</text><path d="M20,30 L40,30 M20,30 L20,15 L30,5" stroke="#333" stroke-width="2"/><circle cx="20" cy="30" r="5" class="atom-c"/><circle cx="30" cy="30" r="5" class="atom-c"/><circle cx="40" cy="30" r="5" class="atom-c"/><circle cx="20" cy="15" r="5" class="atom-c"/><circle cx="30" cy="5" r="5" fill="#ec4899"/></svg>`, l); }
         function createKetone(id, l) { return wrapIcon(id, `${svgStart(60, 40)}<circle cx="15" cy="20" r="6" class="atom-c"/><circle cx="25" cy="20" r="6" class="atom-c"/><circle cx="35" cy="20" r="6" class="atom-c"/><circle cx="45" cy="20" r="6" class="atom-c"/><circle cx="25" cy="10" r="4" class="atom-o"/></svg>`, l); }
         function create3HB(id, l) { return wrapIcon(id, `${svgStart(60, 40)}<circle cx="15" cy="20" r="6" class="atom-c"/><circle cx="25" cy="20" r="6" class="atom-c"/><circle cx="35" cy="20" r="6" class="atom-c"/><circle cx="45" cy="20" r="6" class="atom-c"/><circle cx="25" cy="12" r="3" fill="#ffffff" stroke="#1e293b" stroke-width="2"/></svg>`, l); }
@@ -1030,7 +1251,9 @@
                     <span class="text-[9px] text-slate-400 italic">Drag items here</span>
                 </div>
                 <div class="mt-1 text-[9px] text-slate-400 text-center w-full px-1 leading-tight flex-none pb-2">
-                    Needs: ${data.requires.map(r => ELEMENTS[r] ? ELEMENTS[r].name : r).join(', ')}
+                    ${data.displayNeeds ? data.displayNeeds : (
+                    data.requires.length > 0 ? 'Needs: ' + data.requires.map(r => ELEMENTS[r] ? ELEMENTS[r].name : r).join(', ') : ''
+                )}
                 </div>
             </div>`;
         }
@@ -1112,7 +1335,7 @@
 
             // Optimization: Track last hovered items to minimize DOM updates
             dragState.lastHoveredId = null;
-            dragState.lastTrashHovered = false;
+            dragState.lastToolHovered = false;
 
             const rect = element.getBoundingClientRect();
 
@@ -1128,7 +1351,7 @@
 
             // CACHE drop targets so we don't query DOM on every move
             dragState.dropTargets = [];
-            dragState.trashRect = document.getElementById('trash-bin').getBoundingClientRect();
+            dragState.toolRect = document.getElementById('current-tool-slot').getBoundingClientRect();
 
             if (item.type === 'molecule') {
                 workbenchItems.forEach(t => {
@@ -1194,7 +1417,7 @@
             const cy = currentTop + (dragState.element.offsetHeight / 2);
 
             checkHover(cx, cy);
-            checkTrashHover(cx, cy);
+            checkToolHover(cx, cy);
 
             dragState.rafId = requestAnimationFrame(updateDragVisual);
         }
@@ -1235,19 +1458,31 @@
             }
         }
 
-        function checkTrashHover(cx, cy) {
-            const r = dragState.trashRect;
+        function checkToolHover(cx, cy) {
+            const r = dragState.toolRect;
             const isHovered = (cx > r.left && cx < r.right && cy > r.top && cy < r.bottom);
 
-            if (isHovered !== dragState.lastTrashHovered) {
-                const trash = document.getElementById('trash-bin');
+            if (isHovered !== dragState.lastToolHovered) {
+                const toolSlot = document.getElementById('current-tool-slot');
                 if (isHovered) {
-                    trash.classList.add('hovered');
+                    toolSlot.style.borderColor = getToolColor(currentTool);
+                    toolSlot.style.backgroundColor = '#fff';
+                    toolSlot.style.transform = 'scale(1.1)';
                 } else {
-                    trash.classList.remove('hovered');
+                    toolSlot.style.borderColor = '';
+                    toolSlot.style.backgroundColor = '';
+                    toolSlot.style.transform = '';
                 }
-                dragState.lastTrashHovered = isHovered;
+                dragState.lastToolHovered = isHovered;
             }
+        }
+
+        function getToolColor(tool) {
+            if (tool === 'bin') return '#ef4444';
+            if (tool === 'counter') return '#22c55e';
+            if (tool === 'analyzer') return '#3b82f6';
+            if (tool === 'cloner') return '#a855f7';
+            return '#cbd5e1';
         }
 
         function handleGlobalEnd(e) {
@@ -1260,7 +1495,7 @@
             const item = dragState.item;
             const wb = document.getElementById('workbench');
             const wbRect = wb.getBoundingClientRect();
-            const trash = document.getElementById('trash-bin');
+            const tool = document.getElementById('current-tool-slot');
 
             // Calculate final position from transform
             // We need to commit the transform to actual top/left for placement
@@ -1282,23 +1517,16 @@
                     prevTarget.el.style.borderColor = '';
                 }
             }
-            if (dragState.lastTrashHovered) {
-                trash.classList.remove('hovered');
+            if (dragState.lastToolHovered) {
+                tool.style.borderColor = '';
+                tool.style.backgroundColor = '';
+                tool.style.transform = '';
             }
 
             // Logic using exact same coordinate checks
-            const trashRect = dragState.trashRect;
-            if (cx > trashRect.left && cx < trashRect.right && cy > trashRect.top && cy < trashRect.bottom) {
-                el.remove();
-                const idx = workbenchItems.findIndex(i => i.id === item.id);
-                if (idx > -1) workbenchItems.splice(idx, 1);
-
-                trash.animate([
-                    { transform: 'scale(1)' },
-                    { transform: 'scale(1.2)' },
-                    { transform: 'scale(1)' }
-                ], { duration: 200 });
-
+            const toolRect = dragState.toolRect;
+            if (cx > toolRect.left && cx < toolRect.right && cy > toolRect.top && cy < toolRect.bottom) {
+                handleToolDrop(item, el);
                 resetDragState();
                 return;
             }
@@ -1369,13 +1597,252 @@
             dragState.element = null;
             dragState.item = null;
             dragState.dropTargets = [];
-            dragState.trashRect = null;
+            dragState.toolRect = null;
             dragState.lastHoveredId = null;
-            dragState.lastTrashHovered = false;
+            dragState.lastToolHovered = false;
             dragState.rafId = null;
         }
 
+        // --- TOOL LOGIC ---
+        function toggleToolMenu() {
+            // If dragging, do not toggle
+            if (dragState.active) return;
+            const menu = document.getElementById('tool-menu');
+            const counterList = document.getElementById('counter-list');
+
+            menu.classList.toggle('hidden');
+
+            // Temporary hide counter list when menu is visible to prevent overlap
+            if (!menu.classList.contains('hidden')) {
+                counterList.classList.add('hidden');
+            } else {
+                // Restore counter list if active tool is counter and has items
+                if (currentTool === 'counter' && Object.keys(counterMap).length > 0) {
+                    counterList.classList.remove('hidden');
+                }
+            }
+        }
+
+        function setTool(toolName) {
+            currentTool = toolName;
+
+            // Update UI
+            const icon = document.getElementById('tool-icon');
+            const label = document.getElementById('tool-label');
+            const indicator = document.getElementById('tool-indicator');
+            const counterList = document.getElementById('counter-list');
+
+            let iconSVG = '';
+            let labelText = '';
+            let color = '';
+
+            if (toolName === 'cloner') {
+                iconSVG = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><text x="12" y="16" font-family="sans-serif" font-size="14" font-weight="900" text-anchor="middle" fill="currentColor" stroke="none">×2</text></svg>`;
+                labelText = 'Cloner';
+                color = 'text-purple-600';
+            }
+            if (toolName === 'analyzer') {
+                iconSVG = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+                labelText = 'Analyzer';
+                color = 'text-blue-600';
+            }
+            if (toolName === 'counter') {
+                iconSVG = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><text x="8" y="11" font-family="sans-serif" font-size="10" font-weight="900" text-anchor="middle" fill="currentColor" stroke="none">1</text><text x="16" y="11" font-family="sans-serif" font-size="10" font-weight="900" text-anchor="middle" fill="currentColor" stroke="none">2</text><text x="8" y="21" font-family="sans-serif" font-size="10" font-weight="900" text-anchor="middle" fill="currentColor" stroke="none">3</text><text x="16" y="21" font-family="sans-serif" font-size="10" font-weight="900" text-anchor="middle" fill="currentColor" stroke="none">4</text></svg>`;
+                labelText = 'Counter';
+                color = 'text-green-600';
+            }
+            if (toolName === 'bin') {
+                iconSVG = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+                labelText = 'Bin';
+                color = 'text-red-600';
+            }
+
+            icon.innerHTML = iconSVG;
+            icon.className = `text-3xl md:text-4xl pointer-events-none transition-transform group-hover:rotate-12 ${color}`;
+            label.innerText = labelText;
+
+            document.getElementById('tool-menu').classList.add('hidden');
+
+            // Counter visibility
+            if (toolName === 'counter') {
+                if (Object.keys(counterMap).length > 0) {
+                    counterList.classList.remove('hidden');
+                } else {
+                    counterList.classList.add('hidden');
+                }
+            } else {
+                if (Object.keys(counterMap).length === 0) {
+                    counterList.classList.add('hidden');
+                }
+            }
+        }
+
+        function handleToolDrop(item, el) {
+            const toolSlot = document.getElementById('current-tool-slot');
+
+            // Animate Tool
+            toolSlot.animate([
+                { transform: 'scale(1)' },
+                { transform: 'scale(1.2)' },
+                { transform: 'scale(1)' }
+            ], { duration: 200 });
+
+            if (currentTool === 'bin') {
+                // Delete
+                el.remove();
+                removeItemFromState(item.id);
+            }
+            else if (currentTool === 'counter') {
+                // Count and Delete
+                el.remove();
+                removeItemFromState(item.id);
+
+                // Add to counter
+                const name = ELEMENTS[item.elemId].name;
+                if (!counterMap[name]) counterMap[name] = 0;
+                counterMap[name]++;
+                updateCounterUI();
+            }
+            else if (currentTool === 'cloner') {
+                // Bounce back and Clone!
+                // 1. Reset original position
+                resetItemPosition(item, el);
+
+                // 2. Spawn copy
+                spawnProduct({ id: item.id, x: item.x, y: item.y }, item.elemId);
+            }
+            else if (currentTool === 'analyzer') {
+                // Bounce back and Show Info
+                resetItemPosition(item, el);
+                showAnalyzer(item.elemId);
+            }
+        }
+
+        function removeItemFromState(id) {
+            const idx = workbenchItems.findIndex(i => i.id === id);
+            if (idx > -1) workbenchItems.splice(idx, 1);
+        }
+
+        function resetItemPosition(item, el) {
+            el.classList.remove('dragging');
+            el.style.position = 'absolute';
+            el.style.left = item.x + 'px';
+            el.style.top = item.y + 'px';
+            el.style.transform = '';
+            el.style.willChange = '';
+            el.style.zIndex = '';
+            document.getElementById('workbench').appendChild(el);
+        }
+
+        function updateCounterUI() {
+            const list = document.getElementById('counter-list');
+
+            if (Object.keys(counterMap).length === 0) {
+                list.innerHTML = '';
+                list.classList.add('hidden');
+                return;
+            }
+
+            list.classList.remove('hidden'); // Ensure visible if we have data
+
+            let html = '';
+            for (let [name, count] of Object.entries(counterMap)) {
+                html += `
+                    <div class="flex justify-between items-center bg-green-50 px-2 py-1 rounded border border-green-100">
+                        <span class="font-bold text-slate-700 truncate max-w-[120px]" title="${name}">${name}</span>
+                        <span class="font-bold text-green-600 bg-white px-2 rounded-md shadow-sm border border-green-100">${count}</span>
+                    </div>
+                 `;
+            }
+            // Add clear button
+            html += `<button onclick="clearCounter()" class="w-full text-center text-[10px] text-red-400 hover:text-red-600 mt-1 uppercase font-bold tracking-wider">Reset Counts</button>`;
+
+            list.innerHTML = html;
+        }
+
+        function clearCounter() {
+            counterMap = {};
+            updateCounterUI();
+        }
+
+        function showAnalyzer(elemId) {
+            const data = ELEMENTS[elemId];
+            const modal = document.getElementById('analyzer-modal');
+            const box = document.getElementById('analyzer-content-box');
+
+            document.getElementById('analyzer-title').innerText = data.name;
+            document.getElementById('analyzer-desc').innerText = data.desc;
+
+            // Icon
+            const iconContainer = document.getElementById('analyzer-icon');
+            // Use existing render but without ID/Label for clean look? 
+            // Or just re-use render logic but strip container.
+            // Let's just clone the SVG content for now by rendering a dummy
+            // Actually, we can just use the render function and extract content.
+            // Simplified:
+            iconContainer.innerHTML = '';
+            const tempId = 'temp-analyze';
+            const html = data.render(tempId, '');
+            // We need to extract the SVG from the wrapper
+            // Wrapper: <div ...> <div ...> SVG </div> ... </div>
+            // This is a bit hacky, let's just create a quick svg generator or simply put the render output there.
+            // Putting render output there:
+            iconContainer.innerHTML = html;
+            const el = iconContainer.firstElementChild;
+            el.style.position = 'relative';
+            el.className = ''; // remove molecule classes
+            // Fix svg positioning
+            const inner = el.querySelector('div'); // The transform container
+            if (inner) {
+                inner.className = 'flex items-center justify-center w-full h-full';
+            }
+
+            // Properties
+            let props = [];
+
+            // 1. Carbon Count
+            let cCount = 0;
+            if (data.chainLength) cCount = data.chainLength;
+            else if (elemId === 'acetyl_coa') cCount = 2;
+            else if (elemId === 'glucose') cCount = 6;
+            else if (elemId === 'pyruvate') cCount = 3;
+            else if (elemId === 'glycerol') cCount = 3;
+            else if (elemId.startsWith('acyl_coa_')) {
+                const match = elemId.match(/_(\d+)$/);
+                if (match) cCount = parseInt(match[1]);
+            }
+
+            if (cCount > 0) props.push(`C: ${cCount}`);
+
+            // 2. Type
+            props.push(data.category === 'molecules' ? 'Molecule' : 'Enzyme');
+
+            document.getElementById('analyzer-props').innerText = props.join(' | ') || 'No specific properties';
+
+            // Show
+            modal.classList.remove('hidden');
+            // Small delay for transition
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-90');
+                box.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeAnalyzer() {
+            const modal = document.getElementById('analyzer-modal');
+            const box = document.getElementById('analyzer-content-box');
+
+            modal.classList.add('opacity-0');
+            box.classList.remove('scale-100');
+            box.classList.add('scale-90');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
         function rejectDrop(el) {
+            SoundManager.play('reject');
             el.classList.add('reject');
             setTimeout(() => el.classList.remove('reject'), 400);
         }
@@ -1388,9 +1855,21 @@
             const enzymeData = ELEMENTS[eid];
 
             if (eid === '3hb_dehydrogenase') {
-                return iid === 'ketone_body' || iid === '3_hydroxybutyrate';
+                // Reversible: Ketone <-> 3HB. Prevent dropping same type if already present (though unlikely to happen naturally)
+                if (iid === 'ketone_body') return !target.contents.includes('ketone_body');
+                if (iid === '3_hydroxybutyrate') return !target.contents.includes('3_hydroxybutyrate');
+                return false;
+
             } else if (eid === 'thiolase') {
-                return iid === 'acetyl_coa' || iid === 'acetoacetyl_coa';
+                // Needs 2 Acetyl-CoA OR 1 Acetoacetyl-CoA
+                // Allow up to 2 Acetyl-CoA
+                if (iid === 'acetyl_coa') {
+                    const count = target.contents.filter(k => k === 'acetyl_coa').length;
+                    return count < 2;
+                }
+                if (iid === 'acetoacetyl_coa') return !target.contents.includes('acetoacetyl_coa');
+                return false;
+
             } else if (eid === 'acyltransferase') {
                 const backbones = ['glycerol', 'cholesterol', 'monoacylglycerol', 'diacylglycerol'];
                 const isBackbone = backbones.includes(iid);
@@ -1401,13 +1880,14 @@
                     return !hasBackbone;
                 }
                 if (isFA) {
-                    const hasFA = target.contents.some(k => k === 'fatty_acid' || k.endsWith('_acid'));
-                    return !hasFA;
+                    // Allow multiple FAs, logic handles reaction when enough are present
+                    return true;
                 }
                 return false;
             } else if (eid === 'lipase') {
-                return iid === 'triglyceride' || iid === 'diacylglycerol' ||
-                    iid === 'monoacylglycerol' || iid === 'cholesteryl_ester';
+                const substrates = ['triglyceride', 'diacylglycerol', 'monoacylglycerol', 'cholesteryl_ester'];
+                return substrates.includes(iid) && !target.contents.some(k => substrates.includes(k));
+
             } else if (eid === 'beta_oxidation') {
                 const isSubstrate = iid.startsWith('acyl_coa') && iid !== 'acetyl_coa' && iid !== 'acyl_coa_3';
                 if (!isSubstrate) return false;
@@ -1415,9 +1895,19 @@
                 return !hasSubstrate;
 
             } else if (eid === 'acyl_synthetase') {
-                return true;
+                // Requires 1 ATP + 1 FA
+                const isATP = iid === 'atp';
+                const isFA = iid === 'fatty_acid' || iid.endsWith('_acid');
+
+                if (isATP) return !target.contents.includes('atp');
+                if (isFA) return !target.contents.some(k => k === 'fatty_acid' || k.endsWith('_acid'));
+                return false;
+
             } else if (eid === 'fas') {
-                if (iid === 'malonyl_coa' || iid === 'nadph') return true;
+                // Prevent duplicate Malonyl or NADPH
+                if (iid === 'malonyl_coa') return !target.contents.includes('malonyl_coa');
+                if (iid === 'nadph') return !target.contents.includes('nadph');
+
                 const isPrimerOrChain = iid === 'acetyl_coa' || iid === 'acyl_coa_3' || iid.endsWith('_acid');
                 if (isPrimerOrChain) {
                     const hasPrimerOrChain = target.contents.some(k => k === 'acetyl_coa' || k === 'acyl_coa_3' || k.endsWith('_acid') || k.startsWith('acyl_coa'));
@@ -1426,33 +1916,68 @@
                 return false;
 
             } else if (eid === 'coa_transferase') {
-                return iid === 'succinyl_coa' || iid === 'ketone_body';
+                // 1 Succinyl-CoA + 1 Ketone Body
+                if (iid === 'succinyl_coa') return !target.contents.includes('succinyl_coa');
+                if (iid === 'ketone_body') return !target.contents.includes('ketone_body');
+                return false;
+
             } else if (eid === 'pyruvate_dehydrogenase') {
-                return iid === 'pyruvate';
+                return iid === 'pyruvate' && !target.contents.includes('pyruvate');
+
             } else if (eid === 'citrate_synthase') {
-                return iid === 'acetyl_coa' || iid === 'oaa';
+                if (iid === 'acetyl_coa') return !target.contents.includes('acetyl_coa');
+                if (iid === 'oaa') return !target.contents.includes('oaa');
+                return false;
+
             } else if (eid === 'citrate_lyase') {
-                return iid === 'citrate';
+                return iid === 'citrate' && !target.contents.includes('citrate');
+
             } else if (eid === 'pyruvate_carboxylase') {
-                return iid === 'pyruvate' || iid === 'bicarbonate' || iid === 'atp';
+                // pyruvate, bicarbonate, atp
+                if (['pyruvate', 'bicarbonate', 'atp'].includes(iid)) {
+                    return !target.contents.includes(iid);
+                }
+                return false;
+
             } else if (eid === 'malate_dehydrogenase') {
-                return iid === 'malate' || iid === 'nad' || iid === 'oaa' || iid === 'nadh';
+                // Malate + NAD  OR  OAA + NADH
+                if (['malate', 'nad', 'oaa', 'nadh'].includes(iid)) return !target.contents.includes(iid);
+                return false;
+
             } else if (eid === 'malic_enzyme') {
-                return iid === 'malate';
+                return iid === 'malate' && !target.contents.includes('malate');
+
             } else if (eid === 'glycolysis') {
-                return iid === 'glucose';
+                return iid === 'glucose' && !target.contents.includes('glucose');
+
             } else if (eid === 'etc') {
-                return iid === 'nadh' || iid === 'fadh2';
+                // Consumes immediately, but prevent stacking if animation is slow
+                if (iid === 'nadh') return !target.contents.includes('nadh');
+                if (iid === 'fadh2') return !target.contents.includes('fadh2');
+                return false;
+
             } else if (eid === 'spontaneous_pathway') {
-                return iid === 'ketone_body';
+                return iid === 'ketone_body' && !target.contents.includes('ketone_body');
+
             } else if (eid === 'acc') {
-                return iid === 'acetyl_coa' || iid === 'bicarbonate' || iid === 'atp';
+                if (['acetyl_coa', 'bicarbonate', 'atp'].includes(iid)) {
+                    return !target.contents.includes(iid);
+                }
+                return false;
+
             } else if (eid === 'propionyl_coa_carboxylase') {
-                return iid === 'acyl_coa_3' || iid === 'bicarbonate' || iid === 'atp';
+                if (['acyl_coa_3', 'bicarbonate', 'atp'].includes(iid)) {
+                    return !target.contents.includes(iid);
+                }
+                return false;
+
             } else if (eid === 'methylmalonyl_coa_mutase') {
-                return iid === 'methylmalonyl_coa';
+                return iid === 'methylmalonyl_coa' && !target.contents.includes('methylmalonyl_coa');
             }
-            return enzymeData.requires.includes(iid);
+
+            // Generic Fallback: Allow if required AND NOT already present
+            // This assumes 1 count is sufficient for generic enzymes.
+            return enzymeData.requires.includes(iid) && !target.contents.includes(iid);
         }
 
         function acceptDrop(target, item) {
@@ -1463,6 +1988,7 @@
         }
 
         function rejectDrop(el) {
+            SoundManager.play('reject');
             el.classList.add('reject');
             setTimeout(() => el.classList.remove('reject'), 400);
         }
@@ -1499,6 +2025,7 @@
 
             // Standard Logic
             const run = (products) => {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id);
                 el.classList.add('active-reaction');
                 setTimeout(() => {
@@ -1580,6 +2107,7 @@
 
         function handlePDH(item) {
             if (item.contents.includes('pyruvate')) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id);
                 el.classList.add('active-reaction');
                 setTimeout(() => {
@@ -1592,9 +2120,11 @@
 
         function handleETC(item) {
             if (item.contents.includes('nadh')) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, 'atp'); spawnProduct(item, 'atp'); spawnProduct(item, 'atp'); el.classList.remove('active-reaction'); }, 800);
             } else if (item.contents.includes('fadh2')) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, 'atp'); spawnProduct(item, 'atp'); el.classList.remove('active-reaction'); }, 800);
             }
@@ -1603,9 +2133,11 @@
         function handleMalateDehydrogenase(item) {
             const c = item.contents;
             if (c.includes('malate') && c.includes('nad')) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, 'oaa'); spawnProduct(item, 'nadh'); el.classList.remove('active-reaction'); }, 800);
             } else if (c.includes('oaa') && c.includes('nadh')) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, 'malate'); spawnProduct(item, 'nad'); el.classList.remove('active-reaction'); }, 800);
             }
@@ -1613,6 +2145,7 @@
 
         function handleCoATransferase(item) {
             if (item.contents.includes('succinyl_coa') && item.contents.includes('ketone_body')) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, 'succinate'); spawnProduct(item, 'acetoacetyl_coa'); el.classList.remove('active-reaction'); }, 800);
             }
@@ -1627,6 +2160,7 @@
             else if (c.includes('cholesteryl_ester')) out = ['cholesterol', 'fatty_acid'];
 
             if (out) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => { item.contents = []; updateEnzymeContents(item); out.forEach(p => spawnProduct(item, p)); el.classList.remove('active-reaction'); }, 800);
             }
@@ -1704,6 +2238,7 @@
                 item.contents = [];
                 updateEnzymeContents(item);
 
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id);
                 el.classList.add('active-reaction');
 
@@ -1719,6 +2254,7 @@
         function handleThiolase(item) {
             const ac = item.contents.filter(x => x === 'acetyl_coa').length;
             if (ac >= 2) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => {
                     item.contents.splice(item.contents.indexOf('acetyl_coa'), 1); item.contents.splice(item.contents.indexOf('acetyl_coa'), 1);
@@ -1727,6 +2263,7 @@
                 return;
             }
             if (item.contents.includes('acetoacetyl_coa')) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, 'acetyl_coa'); spawnProduct(item, 'acetyl_coa'); el.classList.remove('active-reaction'); }, 800);
             }
@@ -1738,6 +2275,7 @@
             const faMap = { 'stearic_acid': 'acyl_coa_18', 'palmitic_acid': 'acyl_coa_16', 'myristic_acid': 'acyl_coa_14', 'lauric_acid': 'acyl_coa_12', 'capric_acid': 'acyl_coa_10', 'caprylic_acid': 'acyl_coa_8', 'caproic_acid': 'acyl_coa_6', 'butyric_acid': 'acyl_coa_4', 'pentadecanoic_acid': 'acyl_coa_15', 'tridecanoic_acid': 'acyl_coa_13', 'undecanoic_acid': 'acyl_coa_11', 'nonanoic_acid': 'acyl_coa_9', 'heptanoic_acid': 'acyl_coa_7', 'valeric_acid': 'acyl_coa_5', 'propionic_acid': 'acyl_coa_3', 'fatty_acid': 'acyl_coa' };
             const fa = c.find(k => faMap[k]);
             if (fa) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, faMap[fa]); spawnProduct(item, 'amp'); el.classList.remove('active-reaction'); }, 800);
             }
@@ -1751,6 +2289,7 @@
                 if (curr) rejectDrop(document.getElementById(item.id));
                 return;
             }
+            SoundManager.play('reaction');
             const el = document.getElementById(item.id); el.classList.add('active-reaction');
             setTimeout(() => {
                 item.contents = []; updateEnzymeContents(item);
@@ -1773,9 +2312,11 @@
 
         function handle3HBDehydrogenase(item) {
             if (item.contents.includes('ketone_body')) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, '3_hydroxybutyrate'); el.classList.remove('active-reaction'); }, 800);
             } else if (item.contents.includes('3_hydroxybutyrate')) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, 'ketone_body'); el.classList.remove('active-reaction'); }, 800);
             }
@@ -1798,6 +2339,7 @@
             }
 
             if (starter && hasMalonyl && hasNADPH) {
+                SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
                 setTimeout(() => {
                     item.contents = []; updateEnzymeContents(item);
@@ -1822,6 +2364,5 @@
         init();
     </script>
 </body>
-
 
 </html>
