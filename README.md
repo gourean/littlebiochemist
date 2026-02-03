@@ -12,19 +12,20 @@ This is an interactive educational sandbox designed to help users visualize and 
     -   Enzymes: Pyruvate Dehydrogenase, Citrate Synthase, Fatty Acid Synthase, and many more.
     -   Pathways: High-level abstractions of complex processes like the TCA Cycle and Electron Transport Chain.
 -   Responsive Design: optimized for both desktop and touch devices.
--   Campaign Mode (Beta): Structured learning paths to master metabolic concepts one step at a time.
+-  Topic mode: Structured learning paths to master metabolic concepts one step at a time.
 
 ## Game Modes
 
 ### Sandbox Mode
 The classic experience. Free exploration of all molecules, enzymes, and pathways without restrictions. Build complex reactions and see what happens!
 
-### Campaign Mode (Beta)
+### Topic Mode
 A structured learning experience with specific objectives.
 -   Lipolysis: Break down fats into glycerol and fatty acids.
 -   Activatio*: Prepare fatty acids for oxidation.
 -   Beta-Oxidation: Generate energy from fatty acids.
 -   Ketogenesis: Produce ketone bodies in the liver.
+-   TCA Cycle:Complete the cycle from OAA
 
 ## How to Run
 
@@ -53,4 +54,5 @@ This is a static web application with no build step required.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 
