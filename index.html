@@ -599,31 +599,16 @@
                     this.playNote(523.25, t + 0.15, 0.4); // C5 "Da!"
                     return; // Handled by sub-calls
                 } else if (type === 'bin') {
-                    // Paper Crumple: Filtered Noise
-                    const buffer = this.createNoiseBuffer();
-                    if (buffer) {
-                        const src = this.ctx.createBufferSource();
-                        src.buffer = buffer;
+                    // Digital Delete: Fast descending saw/square
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(800, t);
+                    osc.frequency.exponentialRampToValueAtTime(100, t + 0.15);
 
-                        // Filter to make it sound "papery" (bandpass centered on mids)
-                        const filter = this.ctx.createBiquadFilter();
-                        filter.type = 'bandpass';
-                        filter.frequency.setValueAtTime(800, t);
-                        filter.Q.value = 0.7; // Wide band
+                    gain.gain.setValueAtTime(0.2, t);
+                    gain.gain.linearRampToValueAtTime(0, t + 0.15);
 
-                        src.connect(filter);
-                        filter.connect(gain);
-
-                        // Randomized playback rate for variety
-                        src.playbackRate.value = 0.9 + Math.random() * 0.4;
-
-                        // Envelope: Quick rustle
-                        gain.gain.setValueAtTime(0.8, t);
-                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
-
-                        src.start(t);
-                        src.stop(t + 0.15);
-                    }
+                    osc.start(t);
+                    osc.stop(t + 0.15);
                 } else if (type === 'counter') {
                     // Click/Blip: Short high sine
                     osc.type = 'sine';
@@ -671,6 +656,17 @@
 
                     osc.start(now);
                     osc.stop(now + 0.25);
+                } else if (type === 'pop') {
+                    // Pop: Short sweep
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(500, t);
+                    osc.frequency.exponentialRampToValueAtTime(100, t + 0.1);
+
+                    gain.gain.setValueAtTime(0.5, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+
+                    osc.start(t);
+                    osc.stop(t + 0.1);
                 }
             },
             playNote: function (freq, t, dur) {
@@ -782,7 +778,7 @@
 
             // --- ENZYMES ---
             'coa_transferase': { name: 'CoA Transferase', category: 'enzymes', desc: 'Transfer of coenzyme A', bg: '#fce7f3', border: '#db2777', requires: ['succinyl_coa', 'ketone_body'], produces: ['succinate', 'acetoacetyl_coa'] },
-            'pyruvate_dehydrogenase': { name: 'Pyruvate Dehydrogenase', category: 'enzymes', desc: 'Produce Acetyl-CoA', bg: '#cffafe', border: '#0891b2', requires: ['pyruvate'], produces: ['acetyl_coa', 'nadh', 'co2'] },
+            'pyruvate_dehydrogenase': { name: 'Pyruvate Dehydrogenase', category: 'enzymes', desc: 'Produce Acetyl-CoA', bg: '#cffafe', border: '#0891b2', requires: ['pyruvate', 'nad'], produces: ['acetyl_coa', 'nadh', 'co2'] },
             'citrate_synthase': { name: 'Citrate Synthase', category: 'enzymes', desc: 'Produce Citrate', bg: '#f0fdf4', border: '#16a34a', requires: ['acetyl_coa', 'oaa'], produces: ['citrate'] },
             'citrate_lyase': { name: 'Citrate Lyase', category: 'enzymes', desc: 'Produce OAA and Acetyl CoA', bg: '#f0fdf4', border: '#16a34a', requires: ['citrate'], produces: ['acetyl_coa', 'oaa'] },
             'malic_enzyme': { name: 'Malic Enzyme', category: 'enzymes', desc: 'Produce NADPH', bg: '#fae8ff', border: '#a21caf', requires: ['malate'], produces: ['pyruvate', 'nadph', 'co2'] },
@@ -1039,6 +1035,16 @@
 
                 renderWorkbench();
                 renderInventory(); // Will filter based on topic
+                // Play reset sound if not first load (optional, but requested for resets)
+                // Since this is called by resets, we might want it here, but it's also called on initial load.
+                // The user asked for "topic reset". resetGame() calls this. 
+                // Let's add it to where resetGame() calls or just ensure it plays appropriately.
+                // Given the instruction "apply to topic reset", playing it here covers both load and reset which might be okay or annoying.
+                // A safer place is probably in the reset function or just play it here if we can distinguish.
+                // For simplicity as per request "topic reset", and resetGame calls this, I'll add the sound call in resetGame for campaign mode, or just here.
+                // Use a check? No, let's put it in resetGame handles.
+                // Wait, user said "apply the same sound effect to counter reset, topic reset and sandbox reset".
+                // resetGame() handles topic reset (reloads topic).
             },
 
             nextTopic: function () {
@@ -1218,6 +1224,7 @@
 
         function resetGame() {
             if (GameManager.mode === 'campaign') {
+                SoundManager.play('bin');
                 GameManager.loadTopic(GameManager.currentTopicIndex);
                 return;
             }
@@ -1229,6 +1236,7 @@
             renderWorkbench();
             const tutorial = document.getElementById('tutorial-msg');
             if (tutorial) tutorial.classList.remove('hidden');
+            SoundManager.play('bin');
         }
 
         function switchTab(tabName) {
@@ -1877,6 +1885,7 @@
         }
 
         function clearCounter() {
+            SoundManager.play('bin');
             counterMap = {};
             updateCounterUI();
         }
@@ -2038,7 +2047,9 @@
                 return false;
 
             } else if (eid === 'pyruvate_dehydrogenase') {
-                return iid === 'pyruvate' && !target.contents.includes('pyruvate');
+                // Needs Pyruvate + NAD
+                if (['pyruvate', 'nad'].includes(iid)) return !target.contents.includes(iid);
+                return false;
 
             } else if (eid === 'citrate_synthase') {
                 if (iid === 'acetyl_coa') return !target.contents.includes('acetyl_coa');
@@ -2097,6 +2108,7 @@
         }
 
         function acceptDrop(target, item) {
+            SoundManager.play('pop');
             target.contents.push(item.elemId);
             updateEnzymeContents(target);
             document.getElementById(target.id).style.transform = 'scale(1)';
@@ -2222,12 +2234,14 @@
         }
 
         function handlePDH(item) {
-            if (item.contents.includes('pyruvate')) {
+            if (item.contents.includes('pyruvate') && item.contents.includes('nad')) {
                 SoundManager.play('reaction');
                 const el = document.getElementById(item.id);
                 el.classList.add('active-reaction');
                 setTimeout(() => {
-                    item.contents = []; updateEnzymeContents(item);
+                    // Clear both inputs
+                    item.contents = [];
+                    updateEnzymeContents(item);
                     spawnProduct(item, 'acetyl_coa'); spawnProduct(item, 'nadh'); spawnProduct(item, 'co2');
                     el.classList.remove('active-reaction');
                 }, 800);
