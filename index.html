@@ -238,6 +238,10 @@
             </div>
         </div>
         <div class="flex gap-2">
+            <button onclick="toggleInventory(this)"
+                class="text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-full transition shadow-sm border border-slate-200">
+                👁 Hide Inv
+            </button>
             <button onclick="resetGame()"
                 class="text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-full transition shadow-sm border border-slate-200">
                 ↺ Reset
@@ -399,7 +403,7 @@
         </main>
 
         <!-- Inventory Sidebar -->
-        <aside class="
+        <aside id="inventory-sidebar" class="
             order-2 md:order-1 
             w-full h-[38vh] md:w-[280px] md:h-full 
             bg-slate-50 border-t md:border-t-0 md:border-r border-orange-200 
@@ -1068,6 +1072,17 @@
         function toggleGameMode() {
             // Instead of toggle, go to menu
             showMainMenu();
+        }
+
+        function toggleInventory(btn) {
+            const sidebar = document.getElementById('inventory-sidebar');
+            if (sidebar.classList.contains('hidden')) {
+                sidebar.classList.remove('hidden');
+                btn.innerHTML = '👁 Hide Inv';
+            } else {
+                sidebar.classList.add('hidden');
+                btn.innerHTML = '👁 Show Inv';
+            }
         }
 
         // Helper to spawn at specific location
