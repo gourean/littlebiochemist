@@ -810,7 +810,7 @@
 
             // --- PATHWAYS ---
             'glycolysis': { name: 'Glycolysis', category: 'pathways', desc: 'Glucose Breakdown.', bg: '#dbeafe', border: '#1d4ed8', requires: ['glucose'], produces: ['pyruvate', 'pyruvate', 'nadh', 'nadh', 'atp', 'atp'] },
-            'etc': { name: 'Electron Transport Chain', category: 'pathways', desc: 'Oxidative phosphorylation', bg: '#e0e7ff', border: '#4338ca', special: true, requires: [], produces: [], displayNeeds: 'Input: NADH / FADH2' },
+            'etc': { name: 'Electron Transport Chain', category: 'pathways', desc: 'Oxidative phosphorylation', bg: '#e0e7ff', border: '#4338ca', special: true, requires: [], produces: ['nad'], displayNeeds: 'Input: NADH / FADH2' },
             'beta_oxidation': { name: 'Beta-Oxidation', category: 'pathways', desc: 'Major pathway to breakdown FA', bg: '#ffedd5', border: '#c2410c', special: true, requires: [], produces: ['acetyl_coa', 'nadh', 'fadh2'], displayNeeds: 'Input: Acyl-CoA (Fatty Acid)' },
             'cholesterol_synth': { name: 'Cholesterol Pathway', category: 'pathways', desc: 'Multi steps process', bg: '#fdf2f8', border: '#be185d', requires: ['mevalonate', 'atp'], produces: ['cholesterol'] },
             'tca_cycle': { name: 'TCA Cycle', category: 'pathways', desc: 'Citric acid cycle/Krebs cycle', bg: '#f3f4f6', border: '#475569', requires: ['acetyl_coa'], produces: ['co2', 'co2', 'atp', 'fadh2', 'nadh', 'nadh', 'nadh'] },
@@ -2267,11 +2267,11 @@
             if (item.contents.includes('nadh')) {
                 SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
-                setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, 'atp'); spawnProduct(item, 'atp'); spawnProduct(item, 'atp'); el.classList.remove('active-reaction'); }, 800);
+                setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, 'atp'); spawnProduct(item, 'atp'); spawnProduct(item, 'atp'); spawnProduct(item, 'nad'); el.classList.remove('active-reaction'); }, 800);
             } else if (item.contents.includes('fadh2')) {
                 SoundManager.play('reaction');
                 const el = document.getElementById(item.id); el.classList.add('active-reaction');
-                setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, 'atp'); spawnProduct(item, 'atp'); el.classList.remove('active-reaction'); }, 800);
+                setTimeout(() => { item.contents = []; updateEnzymeContents(item); spawnProduct(item, 'atp'); spawnProduct(item, 'atp'); spawnProduct(item, 'fad'); el.classList.remove('active-reaction'); }, 800);
             }
         }
 
